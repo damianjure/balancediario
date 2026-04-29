@@ -1,6 +1,4 @@
 import express from "express";
-import path from "path";
-import { fileURLToPath } from "url";
 import { Bot, InlineKeyboard } from "grammy";
 import dotenv from "dotenv";
 import { createClient } from '@supabase/supabase-js';
@@ -8,16 +6,13 @@ import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || "";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
-const dashboardUrl = process.env.DASHBOARD_URL || "https://ais-dev-uhxsvvda4nn64bxwgwh6v6-116197749063.us-west2.run.app/";
+const dashboardUrl = process.env.DASHBOARD_URL || "https://balancediario.web.app";
 
 // --- TELEGRAM BOT LOGIC ---
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -184,23 +179,13 @@ if (bot) {
   console.warn("⚠️ TELEGRAM_BOT_TOKEN no configurado. El bot no se iniciará.");
 }
 
-async function startServer() {
-  const app = express();
-  const PORT = parseInt(process.env.PORT || "3000", 10);
+const app = express();
+const PORT = parseInt(process.env.PORT || "3000", 10);
 
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", botActive: !!bot });
-  });
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", botActive: !!bot });
+});
 
-  const distPath = path.join(process.cwd(), 'dist');
-  app.use(express.static(distPath));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
-
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
-  });
-}
-
-startServer();
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Bot server running on http://0.0.0.0:${PORT}`);
+});
