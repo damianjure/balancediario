@@ -103,5 +103,33 @@ export const dbService = {
       return last.id;
     }
     return null;
+  },
+
+  // --- Categorías ---
+  async getCategorias() {
+    const { data, error } = await supabase
+      .from('categorias')
+      .select('*')
+      .order('nombre', { ascending: true });
+    if (error) throw error;
+    return data as { id: string, nombre: string, created_at: string }[];
+  },
+
+  async addCategoria(nombre: string) {
+    const { data, error } = await supabase
+      .from('categorias')
+      .insert([{ nombre }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data as { id: string, nombre: string, created_at: string };
+  },
+
+  async deleteCategoria(id: string) {
+    const { error } = await supabase
+      .from('categorias')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   }
 };
