@@ -1,26 +1,23 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import { Bot, InlineKeyboard } from "grammy";
 import dotenv from "dotenv";
+import { createClient } from '@supabase/supabase-js';
+import { GoogleGenAI } from "@google/genai";
 
-// Load env vars
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// --- SERVICES (We'll re-import or redefine for server-side) ---
-// Note: In a real project we'd use shared modules, but for simplicity we'll adapt them
-import { createClient } from '@supabase/supabase-js';
-import { GoogleGenAI, Type } from "@google/genai";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || "";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+
+const dashboardUrl = process.env.DASHBOARD_URL || "https://ais-dev-uhxsvvda4nn64bxwgwh6v6-116197749063.us-west2.run.app/";
 
 // --- TELEGRAM BOT LOGIC ---
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -33,7 +30,7 @@ if (bot) {
     .text("📋 Menú", "menu").row()
     .text("📊 Informe", "informe").text("🏢 Empresas", "empresas").row()
     .text("📁 Categorías", "categorias").text("🗑️ Borrar Último", "borrar_last").row()
-    .url("🌐 Abrir Dashboard", "https://ais-dev-uhxsvvda4nn64bxwgwh6v6-116197749063.us-west2.run.app/");
+    .url("🌐 Abrir Dashboard", dashboardUrl);
 
   bot.command("start", (ctx) => 
     ctx.reply("¡Hola! Soy tu asistente financiero. 💸\n\nPodés escribirme frases como:\n- 'gasté 5000 en pan en Taller Central'\n- 'entró un pago de 100 lucas'\n- 'agregar empresa MiNegocio'\n\nUsá /menu para ver opciones.", {
@@ -95,7 +92,7 @@ if (bot) {
   });
 
   bot.command("dashboard", (ctx) => {
-    ctx.reply("🔗 [Abrir Dashboard Web](https://ais-dev-uhxsvvda4nn64bxwgwh6v6-116197749063.us-west2.run.app/)", { parse_mode: "Markdown" });
+    ctx.reply(`🔗 [Abrir Dashboard Web](${dashboardUrl})`, { parse_mode: "Markdown" });
   });
 
   // Handle Menu Callbacks
@@ -189,27 +186,17 @@ if (bot) {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = parseInt(process.env.PORT || "3000", 10);
 
-  // API Routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", botActive: !!bot });
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
+  const distPath = path.join(process.cwd(), 'dist');
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
