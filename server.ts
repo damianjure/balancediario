@@ -7,13 +7,13 @@ dotenv.config();
 
 // --- SERVICES ---
 import { createClient } from '@supabase/supabase-js';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || "";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 const dashboardUrl = process.env.DASHBOARD_URL || "https://balancediario.web.app";
 
@@ -276,18 +276,20 @@ if (bot) {
       const { data: currentCats } = await supabase.from('categorias').select('nombre');
       const catList = currentCats?.map(c => c.nombre).join(', ') || "Otros";
 
-      const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
-        systemInstruction: `Actuá como un extractor de datos financieros para el mercado argentino.
+      const prompt = `Extraé los datos de este mensaje: "${text}"`;
+      const result = await genAI.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: prompt,
+        config: {
+          systemInstruction: `Actuá como un extractor de datos financieros para el mercado argentino.
         ENTENDÉ JERGA: "lucas/k" (1000), "gamba" (100), "palo" (1.000.000), "pe" (pesos).
         OBTENÉ: items (monto, tipo: ingreso/egreso, moneda: ARS/USD, categoria, empresa, descripcion).
         CATEGORIAS DISPONIBLES: ${catList}. Si no encaja en ninguna, inventá una coherente o usá "Otros".
         Retorná JSON puro.`
+        },
       });
-
-      const prompt = `Extraé los datos de este mensaje: "${text}"`;
-      const result = await model.generateContent(prompt);
-      const rawResponse = result.response.text().replace(/```json|```/g, "").trim();
+      const textResponse = result.text || result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const rawResponse = textResponse.replace(/```json|```/g, "").trim();
       const extracted = JSON.parse(rawResponse);
 
       if (extracted.intent === "REGISTRAR" && extracted.items) {
@@ -348,7 +350,9 @@ if (bot) {
     ctx.editMessageText("Seleccioná la categoría correcta:", { reply_markup: kb });
   });
 
-  bot.start();
+  bot.start().catch((err) => {
+    console.error("⚠️ Bot start error:", err.message);
+  });
 
   // --- CRON JOBS ---
   cron.schedule('0 21 * * *', async () => {
@@ -430,14 +434,15 @@ app.post("/api/extract", async (req, res) => {
     if (!text) return res.status(400).json({ error: "text is required" });
 
     const catList = categories?.map((c: any) => c.nombre).join(", ") || "Otros";
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      systemInstruction: `${SYSTEM_PROMPT}\nCATEGORIAS DISPONIBLES: ${catList}. Si no encaja en ninguna, inventá una coherente o usá "Otros".`,
+    const result = await genAI.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: text,
+      config: {
+        systemInstruction: `${SYSTEM_PROMPT}\nCATEGORIAS DISPONIBLES: ${catList}. Si no encaja en ninguna, inventá una coherente o usá "Otros".`,
+      },
     });
-
-    const result = await model.generateContent(text);
-    const rawResponse = result.response.text().replace(/```json|```/g, "").trim();
-    const extracted = JSON.parse(rawResponse);
+    const textResponse = result.text || result.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const extracted = JSON.parse(textResponse.replace(/```json|```/g, "").trim());
     res.json(extracted);
   } catch (err) {
     console.error("Extract error:", err);
