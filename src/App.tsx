@@ -26,6 +26,7 @@ export default function App() {
   const [history, setHistory] = useState<Movimiento[]>([]);
   const [pendingItem, setPendingItem] = useState<ExtractedItem & { id?: string, originalText: string } | null>(null);
   const [customCompanies, setCustomCompanies] = useState<Empresa[]>([]);
+  const [categories, setCategories] = useState<{id: string, nombre: string}[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'warning'} | null>(null);
@@ -67,12 +68,14 @@ export default function App() {
           return;
         }
 
-        const [movs, emps] = await Promise.all([
+        const [movs, emps, cats] = await Promise.all([
           dbService.getMovimientos(),
-          dbService.getEmpresas()
+          dbService.getEmpresas(),
+          dbService.getCategorias()
         ]);
         setHistory(movs);
         setCustomCompanies(emps);
+        setCategories(cats);
         setIsConfigured(true);
       } catch (err) {
         console.error('Failed to load data', err);
@@ -174,6 +177,18 @@ export default function App() {
         showNotification(`Empresa "${name}" eliminada.`, 'warning');
       } catch (e) {
         showNotification('Error: Posible empresa con movimientos.', 'warning');
+      }
+    }
+  };
+
+  const deleteCategory = async (id: string, name: string) => {
+    if (window.confirm(`¿Borrar categoría "${name}"?`)) {
+      try {
+        await dbService.deleteCategoria(id);
+        setCategories(prev => prev.filter(c => c.id !== id));
+        showNotification(`Categoría "${name}" eliminada.`, 'warning');
+      } catch (e) {
+        showNotification('Error: Posible categoría en uso.', 'warning');
       }
     }
   };
@@ -372,7 +387,7 @@ export default function App() {
                         className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
                           selectedCompany === company 
                             ? 'bg-neutral-900 text-white shadow-md' 
-                            : 'bg-white border border-neutral-200 text-neutral-500 hover:border-neutral-400'
+                             : 'bg-white border border-neutral-200 text-neutral-500 hover:border-neutral-400'
                         }`}
                       >
                         {company === 'all' ? 'Todas las Empresas' : company}
@@ -380,7 +395,7 @@ export default function App() {
                       {empObj && (
                         <button 
                           onClick={(e) => { e.stopPropagation(); deleteCompany(empObj.id, empObj.nombre); }}
-                          className="absolute -top-1 -right-1 bg-white border border-neutral-200 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm text-neutral-400 hover:text-red-500"
+                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
                         >
                           <Trash2 className="w-2.5 h-2.5" />
                         </button>
@@ -388,6 +403,24 @@ export default function App() {
                     </div>
                   );
                 })}
+              </div>
+
+               {/* Categories Management View */}
+               <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide border-t border-neutral-100 pt-4">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mr-2">Categorías:</span>
+                {categories.map(cat => (
+                  <div key={cat.id} className="group relative">
+                    <span className="px-3 py-1 bg-neutral-100 text-neutral-600 rounded-full text-xs font-medium">
+                      {cat.nombre}
+                    </span>
+                    <button 
+                      onClick={() => deleteCategory(cat.id, cat.nombre)}
+                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                    >
+                      <Trash2 className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                ))}
               </div>
 
               <AnimatePresence>

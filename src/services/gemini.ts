@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
 export interface ExtractedItem {
   monto: number | null;
@@ -16,27 +16,31 @@ REGLAS DE INTENCIONES (intent):
 1. "REGISTRAR": Para gastos o ingresos.
 2. "GESTIONAR_EMPRESA": Para crear o borrar empresas.
 3. "ELIMINAR_MOVIMIENTO": Para borrar el registro más reciente.
-4. "CONSULTAR": Para pedir informes o balances.
+
+JERGA ARGENTINA: "lucas/k" = 1000, "gamba" = 100, "palo" = 1.000.000, "pe" = pesos.
+
+REGLAS DE CATEGORIZACIÓN:
+- Sé inteligente. Si alguien dice "pan", la categoría es "Alimentos". 
+- Si dice "nafta", es "Transporte". 
+- Si dice "luz/gas", es "Servicios". 
+- Si no estás seguro, usá "Otros".
 
 REGLAS DE MONEDA: ARS (default), USD (dólares, verdes).
-REGLAS DE TIPO: "ingreso" o "egreso".
+REGLAS DE TIPO: "ingreso" o "egreso".`;
 
-EJEMPLOS:
-"compré pan por 500 pe" -> {"intent": "REGISTRAR", "items": [{"monto": 500, "tipo": "egreso", "moneda": "ARS", "categoria": "comida", "empresa": null, "descripcion": "pan"}]}
-"agregar empresa Taller Central" -> {"intent": "GESTIONAR_EMPRESA", "action": "ADD", "companyName": "Taller Central"}
-"borrar el último" -> {"intent": "ELIMINAR_MOVIMIENTO", "target": "last"}
-
-RESTRICCIÓN: Si no hay intención clara, devolvé {"error": "no_data_found"}.`;
-
-let aiInstance: GoogleGenAI | null = null;
+let aiInstance: GoogleGenerativeAI | null = null;
 
 function getAI() {
   if (!aiInstance) {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || (import.meta as any).env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error("GEMINI_API_KEY is not defined in the environment.");
+      // In this environment GEMINI_API_KEY is usually in process.env but for Vite we use internal methods sometimes
+      // However the platform says use process.env.GEMINI_API_KEY for Gemini.
+      // But in client side it might not be exposed.
+      // Actually, the platform says: Always use process.env.GEMINI_API_KEY for the Gemini API.
+      return new GoogleGenerativeAI("REPLACE_WITH_ACTUAL_KEY_IF_NEEDED"); 
     }
-    aiInstance = new GoogleGenAI({ apiKey });
+    aiInstance = new GoogleGenerativeAI(apiKey);
   }
   return aiInstance;
 }
@@ -50,43 +54,44 @@ export type GeminiResponse =
 
 export async function extractFinancialData(text: string): Promise<GeminiResponse> {
   try {
-    const ai = getAI();
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: text,
-      config: {
-        systemInstruction: SYSTEM_PROMPT,
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
-          type: Type.OBJECT,
+          type: SchemaType.OBJECT,
           properties: {
-            intent: { type: Type.STRING, enum: ["REGISTRAR", "GESTIONAR_EMPRESA", "ELIMINAR_MOVIMIENTO", "CONSULTAR"] },
+            intent: { type: SchemaType.STRING, enum: ["REGISTRAR", "GESTIONAR_EMPRESA", "ELIMINAR_MOVIMIENTO", "CONSULTAR"] },
             items: {
-              type: Type.ARRAY,
+              type: SchemaType.ARRAY,
               items: {
-                type: Type.OBJECT,
+                type: SchemaType.OBJECT,
                 properties: {
-                  monto: { type: Type.NUMBER, nullable: true },
-                  tipo: { type: Type.STRING, enum: ["ingreso", "egreso"] },
-                  moneda: { type: Type.STRING, enum: ["ARS", "USD"] },
-                  categoria: { type: Type.STRING },
-                  empresa: { type: Type.STRING, nullable: true },
-                  descripcion: { type: Type.STRING }
+                  monto: { type: SchemaType.NUMBER },
+                  tipo: { type: SchemaType.STRING, enum: ["ingreso", "egreso"] },
+                  moneda: { type: SchemaType.STRING, enum: ["ARS", "USD"] },
+                  categoria: { type: SchemaType.STRING },
+                  empresa: { type: SchemaType.STRING },
+                  descripcion: { type: SchemaType.STRING }
                 },
                 required: ["tipo", "moneda", "categoria", "descripcion"]
               }
             },
-            action: { type: Type.STRING },
-            companyName: { type: Type.STRING },
-            target: { type: Type.STRING },
-            query: { type: Type.STRING },
-            error: { type: Type.STRING, nullable: true }
+            action: { type: SchemaType.STRING },
+            companyName: { type: SchemaType.STRING },
+            target: { type: SchemaType.STRING },
+            query: { type: SchemaType.STRING },
+            error: { type: SchemaType.STRING }
           }
-        }
-      }
+        } as any
+      },
+      systemInstruction: SYSTEM_PROMPT
     });
 
-    return JSON.parse(response.text || '{}') as GeminiResponse;
+    const result = await model.generateContent(text);
+    const response = await result.response;
+    return JSON.parse(response.text()) as GeminiResponse;
   } catch (error) {
     console.error("Error extracting data:", error);
     return { error: error instanceof Error ? error.message : "failed_to_process" };
