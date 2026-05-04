@@ -18,6 +18,8 @@ function createSupabaseStub(
         auditLogs?: unknown[];
         empresaDeleteBackups?: unknown[];
         reportExports?: unknown[];
+        telegramLinks?: unknown[];
+        telegramInviteTokens?: unknown[];
       } = [],
 ) {
   const callLog: Array<{ table: string; type: string; args: unknown[] }> = [];
@@ -64,6 +66,8 @@ function createSupabaseStub(
   const auditLogsRows = dataSeed.auditLogs ?? [];
   const empresaDeleteBackupsRows = dataSeed.empresaDeleteBackups ?? [];
   const reportExportsRows = dataSeed.reportExports ?? [];
+  const telegramLinksRows = dataSeed.telegramLinks ?? [];
+  const telegramInviteTokensRows = dataSeed.telegramInviteTokens ?? [];
 
   const builder = (table: string) => {
     let rows = [...(dataSeed.movimientos ?? [])];
@@ -77,6 +81,8 @@ function createSupabaseStub(
     if (table === "audit_logs") rows = [...auditLogsRows];
     if (table === "empresa_delete_backups") rows = [...empresaDeleteBackupsRows];
     if (table === "report_exports") rows = [...reportExportsRows];
+    if (table === "telegram_links") rows = [...telegramLinksRows];
+    if (table === "telegram_invite_tokens") rows = [...telegramInviteTokensRows];
     const api = {
       select(...args: unknown[]) {
         callLog.push({ table, type: "select", args });
@@ -171,12 +177,24 @@ function createSupabaseStub(
       },
       update(...args: unknown[]) {
         callLog.push({ table, type: "update", args });
-        return {
+        let filteredRows = [...rows];
+        const updateBuilder: any = {
           eq(column: string, value: string) {
             callLog.push({ table, type: "eq", args: [column, value] });
-            return Promise.resolve({ data: rows.filter((row: any) => row[column] === value), error: null });
+            filteredRows = filteredRows.filter((row: any) => row[column] === value);
+            return updateBuilder;
+          },
+          select(_cols?: string) {
+            return updateBuilder;
+          },
+          limit(_n: number) {
+            return Promise.resolve({ data: filteredRows, error: null });
+          },
+          then(resolve: (v: unknown) => void) {
+            resolve({ data: filteredRows, error: null });
           },
         };
+        return updateBuilder;
       },
       single() {
         callLog.push({ table, type: "single", args: [] });
@@ -1809,5 +1827,405 @@ test("lista historial de exportaciones scopeado por owner_user_id", async () => 
     await new Promise<void>((resolve, reject) =>
       server.close((err) => (err ? reject(err) : resolve())),
     );
+  }
+});
+
+// ─── Telegram invite-token & links ────────────────────────────────────────────
+
+const ownerSession: AppSession = {
+  userId: "owner-1",
+  email: "owner@example.com",
+  role: "member",
+  status: "active",
+};
+
+const editorSession: AppSession = {
+  userId: "editor-1",
+  email: "editor@example.com",
+  role: "member",
+  status: "active",
+};
+
+test("owner genera token de invitación Telegram para un editor del dashboard", async () => {
+  const supabase = createSupabaseStub({
+    dashboardMembers: [
+      { id: "dm-owner", user_id: "owner-1", dashboard_id: "dashboard-1", role: "owner", status: "active" },
+      { id: "dm-editor", user_id: "editor-1", dashboard_id: "dashboard-1", role: "editor", status: "active" },
+    ],
+    telegramInviteTokens: [],
+  });
+  const app = createApp({
+    supabase: supabase.client as AppDeps["supabase"],
+    genAI: { models: { async generateContent() { return { text: '{"intent":"REGISTRAR","items":[]}' }; } } },
+    allowedOrigins: ["http://localhost:5173"],
+    botActive: false,
+    publicAppUrl: "https://app.example.com",
+    resolveSession: async () => ownerSession,
+  });
+  const server = app.listen(0);
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  try {
+    const address = server.address() as AddressInfo;
+    const res = await fetch(`http://127.0.0.1:${address.port}/api/telegram/invite-token`, {
+      method: "POST",
+      headers: { Authorization: "Bearer valid-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ target_user_id: "editor-1" }),
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(typeof body.token, "string");
+    assert.equal(typeof body.expires_at, "string");
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
+  }
+});
+
+test("editor sin permiso invite_telegram recibe 403 al generar token de invitación", async () => {
+  const supabase = createSupabaseStub({
+    dashboardMembers: [
+      { id: "dm-owner", user_id: "owner-1", dashboard_id: "dashboard-1", role: "owner", status: "active" },
+      { id: "dm-editor", user_id: "editor-1", dashboard_id: "dashboard-1", role: "editor", status: "active", permissions: {} },
+    ],
+    telegramInviteTokens: [],
+  });
+  const app = createApp({
+    supabase: supabase.client as AppDeps["supabase"],
+    genAI: { models: { async generateContent() { return { text: '{"intent":"REGISTRAR","items":[]}' }; } } },
+    allowedOrigins: ["http://localhost:5173"],
+    botActive: false,
+    publicAppUrl: "https://app.example.com",
+    resolveSession: async () => editorSession,
+  });
+  const server = app.listen(0);
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  try {
+    const address = server.address() as AddressInfo;
+    const res = await fetch(`http://127.0.0.1:${address.port}/api/telegram/invite-token`, {
+      method: "POST",
+      headers: { Authorization: "Bearer valid-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ target_user_id: "some-user" }),
+    });
+    assert.equal(res.status, 403);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
+  }
+});
+
+test("owner recibe 404 al invitar por Telegram a usuario que no pertenece al dashboard", async () => {
+  const supabase = createSupabaseStub({
+    dashboardMembers: [
+      { id: "dm-owner", user_id: "owner-1", dashboard_id: "dashboard-1", role: "owner", status: "active" },
+    ],
+    telegramInviteTokens: [],
+  });
+  const app = createApp({
+    supabase: supabase.client as AppDeps["supabase"],
+    genAI: { models: { async generateContent() { return { text: '{"intent":"REGISTRAR","items":[]}' }; } } },
+    allowedOrigins: ["http://localhost:5173"],
+    botActive: false,
+    publicAppUrl: "https://app.example.com",
+    resolveSession: async () => ownerSession,
+  });
+  const server = app.listen(0);
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  try {
+    const address = server.address() as AddressInfo;
+    const res = await fetch(`http://127.0.0.1:${address.port}/api/telegram/invite-token`, {
+      method: "POST",
+      headers: { Authorization: "Bearer valid-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ target_user_id: "unknown-user" }),
+    });
+    assert.equal(res.status, 404);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
+  }
+});
+
+test("lista links de Telegram del dashboard", async () => {
+  const supabase = createSupabaseStub({
+    dashboardMembers: [
+      { id: "dm-owner", user_id: "owner-1", dashboard_id: "dashboard-1", role: "owner", status: "active" },
+    ],
+    telegramLinks: [
+      { id: "tl-1", dashboard_id: "dashboard-1", telegram_user_id: "tg-100", telegram_username: "user100", app_user_id: "editor-1", status: "active", linked_at: "2026-05-01T00:00:00.000Z", created_at: "2026-05-01T00:00:00.000Z" },
+      { id: "tl-2", dashboard_id: "dashboard-1", telegram_user_id: "tg-200", telegram_username: "user200", app_user_id: "editor-2", status: "pending_owner_confirm", linked_at: null, created_at: "2026-05-02T00:00:00.000Z" },
+    ],
+  });
+  const app = createApp({
+    supabase: supabase.client as AppDeps["supabase"],
+    genAI: { models: { async generateContent() { return { text: '{"intent":"REGISTRAR","items":[]}' }; } } },
+    allowedOrigins: ["http://localhost:5173"],
+    botActive: false,
+    publicAppUrl: "https://app.example.com",
+    resolveSession: async () => ownerSession,
+  });
+  const server = app.listen(0);
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  try {
+    const address = server.address() as AddressInfo;
+    const res = await fetch(`http://127.0.0.1:${address.port}/api/telegram/links`, {
+      headers: { Authorization: "Bearer valid-token" },
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(Array.isArray(body.links), true);
+    assert.equal(body.links.length, 2);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
+  }
+});
+
+test("owner confirma link de Telegram pendiente", async () => {
+  const supabase = createSupabaseStub({
+    dashboardMembers: [
+      { id: "dm-owner", user_id: "owner-1", dashboard_id: "dashboard-1", role: "owner", status: "active" },
+    ],
+    telegramLinks: [
+      { id: "tl-1", dashboard_id: "dashboard-1", app_user_id: "editor-1", status: "pending_owner_confirm", linked_at: null, created_at: "2026-05-01T00:00:00.000Z" },
+    ],
+  });
+  const app = createApp({
+    supabase: supabase.client as AppDeps["supabase"],
+    genAI: { models: { async generateContent() { return { text: '{"intent":"REGISTRAR","items":[]}' }; } } },
+    allowedOrigins: ["http://localhost:5173"],
+    botActive: false,
+    publicAppUrl: "https://app.example.com",
+    resolveSession: async () => ownerSession,
+  });
+  const server = app.listen(0);
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  try {
+    const address = server.address() as AddressInfo;
+    const res = await fetch(`http://127.0.0.1:${address.port}/api/telegram/links/tl-1/confirm`, {
+      method: "POST",
+      headers: { Authorization: "Bearer valid-token" },
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.confirmed, true);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
+  }
+});
+
+test("editor recibe 403 al intentar confirmar link de Telegram", async () => {
+  const supabase = createSupabaseStub({
+    dashboardMembers: [
+      { id: "dm-editor", user_id: "editor-1", dashboard_id: "dashboard-1", role: "editor", status: "active" },
+    ],
+    telegramLinks: [
+      { id: "tl-1", dashboard_id: "dashboard-1", app_user_id: "some-user", status: "pending_owner_confirm", linked_at: null, created_at: "2026-05-01T00:00:00.000Z" },
+    ],
+  });
+  const app = createApp({
+    supabase: supabase.client as AppDeps["supabase"],
+    genAI: { models: { async generateContent() { return { text: '{"intent":"REGISTRAR","items":[]}' }; } } },
+    allowedOrigins: ["http://localhost:5173"],
+    botActive: false,
+    publicAppUrl: "https://app.example.com",
+    resolveSession: async () => editorSession,
+  });
+  const server = app.listen(0);
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  try {
+    const address = server.address() as AddressInfo;
+    const res = await fetch(`http://127.0.0.1:${address.port}/api/telegram/links/tl-1/confirm`, {
+      method: "POST",
+      headers: { Authorization: "Bearer valid-token" },
+    });
+    assert.equal(res.status, 403);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
+  }
+});
+
+test("owner puede revocar el link de Telegram de otro usuario", async () => {
+  const supabase = createSupabaseStub({
+    dashboardMembers: [
+      { id: "dm-owner", user_id: "owner-1", dashboard_id: "dashboard-1", role: "owner", status: "active" },
+    ],
+    telegramLinks: [
+      { id: "tl-1", dashboard_id: "dashboard-1", app_user_id: "editor-1", status: "active", linked_at: "2026-05-01T00:00:00.000Z", created_at: "2026-05-01T00:00:00.000Z" },
+    ],
+  });
+  const app = createApp({
+    supabase: supabase.client as AppDeps["supabase"],
+    genAI: { models: { async generateContent() { return { text: '{"intent":"REGISTRAR","items":[]}' }; } } },
+    allowedOrigins: ["http://localhost:5173"],
+    botActive: false,
+    publicAppUrl: "https://app.example.com",
+    resolveSession: async () => ownerSession,
+  });
+  const server = app.listen(0);
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  try {
+    const address = server.address() as AddressInfo;
+    const res = await fetch(`http://127.0.0.1:${address.port}/api/telegram/links/tl-1`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer valid-token" },
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.revoked, true);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
+  }
+});
+
+test("editor puede revocar su propio link de Telegram", async () => {
+  const supabase = createSupabaseStub({
+    dashboardMembers: [
+      { id: "dm-editor", user_id: "editor-1", dashboard_id: "dashboard-1", role: "editor", status: "active" },
+    ],
+    telegramLinks: [
+      { id: "tl-1", dashboard_id: "dashboard-1", app_user_id: "editor-1", status: "active", linked_at: "2026-05-01T00:00:00.000Z", created_at: "2026-05-01T00:00:00.000Z" },
+    ],
+  });
+  const app = createApp({
+    supabase: supabase.client as AppDeps["supabase"],
+    genAI: { models: { async generateContent() { return { text: '{"intent":"REGISTRAR","items":[]}' }; } } },
+    allowedOrigins: ["http://localhost:5173"],
+    botActive: false,
+    publicAppUrl: "https://app.example.com",
+    resolveSession: async () => editorSession,
+  });
+  const server = app.listen(0);
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  try {
+    const address = server.address() as AddressInfo;
+    const res = await fetch(`http://127.0.0.1:${address.port}/api/telegram/links/tl-1`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer valid-token" },
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.revoked, true);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
+  }
+});
+
+test("editor recibe 403 al intentar revocar el link de otro usuario", async () => {
+  const supabase = createSupabaseStub({
+    dashboardMembers: [
+      { id: "dm-editor", user_id: "editor-1", dashboard_id: "dashboard-1", role: "editor", status: "active" },
+    ],
+    telegramLinks: [
+      { id: "tl-1", dashboard_id: "dashboard-1", app_user_id: "someone-else", status: "active", linked_at: "2026-05-01T00:00:00.000Z", created_at: "2026-05-01T00:00:00.000Z" },
+    ],
+  });
+  const app = createApp({
+    supabase: supabase.client as AppDeps["supabase"],
+    genAI: { models: { async generateContent() { return { text: '{"intent":"REGISTRAR","items":[]}' }; } } },
+    allowedOrigins: ["http://localhost:5173"],
+    botActive: false,
+    publicAppUrl: "https://app.example.com",
+    resolveSession: async () => editorSession,
+  });
+  const server = app.listen(0);
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  try {
+    const address = server.address() as AddressInfo;
+    const res = await fetch(`http://127.0.0.1:${address.port}/api/telegram/links/tl-1`, {
+      method: "DELETE",
+      headers: { Authorization: "Bearer valid-token" },
+    });
+    assert.equal(res.status, 403);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
+  }
+});
+
+// ─── PATCH /api/dashboard/members/:id/permissions ─────────────────────────────
+
+test("owner actualiza permisos de un editor del dashboard", async () => {
+  const supabase = createSupabaseStub({
+    dashboardMembers: [
+      { id: "dm-owner", user_id: "owner-1", dashboard_id: "dashboard-1", role: "owner", status: "active" },
+      { id: "dm-editor-1", user_id: "editor-1", dashboard_id: "dashboard-1", role: "editor", status: "active", permissions: {} },
+    ],
+  });
+  const app = createApp({
+    supabase: supabase.client as AppDeps["supabase"],
+    genAI: { models: { async generateContent() { return { text: '{"intent":"REGISTRAR","items":[]}' }; } } },
+    allowedOrigins: ["http://localhost:5173"],
+    botActive: false,
+    publicAppUrl: "https://app.example.com",
+    resolveSession: async () => ownerSession,
+  });
+  const server = app.listen(0);
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  try {
+    const address = server.address() as AddressInfo;
+    const res = await fetch(`http://127.0.0.1:${address.port}/api/dashboard/members/dm-editor-1/permissions`, {
+      method: "PATCH",
+      headers: { Authorization: "Bearer valid-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ permissions: { export_drive: true, delete_any: false } }),
+    });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.permissions.export_drive, true);
+    assert.equal(body.permissions.delete_any, false);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
+  }
+});
+
+test("no se pueden establecer permisos en un viewer — recibe 400", async () => {
+  const supabase = createSupabaseStub({
+    dashboardMembers: [
+      { id: "dm-owner", user_id: "owner-1", dashboard_id: "dashboard-1", role: "owner", status: "active" },
+      { id: "dm-viewer-1", user_id: "viewer-2", dashboard_id: "dashboard-1", role: "viewer", status: "active" },
+    ],
+  });
+  const app = createApp({
+    supabase: supabase.client as AppDeps["supabase"],
+    genAI: { models: { async generateContent() { return { text: '{"intent":"REGISTRAR","items":[]}' }; } } },
+    allowedOrigins: ["http://localhost:5173"],
+    botActive: false,
+    publicAppUrl: "https://app.example.com",
+    resolveSession: async () => ownerSession,
+  });
+  const server = app.listen(0);
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  try {
+    const address = server.address() as AddressInfo;
+    const res = await fetch(`http://127.0.0.1:${address.port}/api/dashboard/members/dm-viewer-1/permissions`, {
+      method: "PATCH",
+      headers: { Authorization: "Bearer valid-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ permissions: { export_drive: true } }),
+    });
+    assert.equal(res.status, 400);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
+  }
+});
+
+test("editor recibe 403 al intentar cambiar permisos de un miembro", async () => {
+  const supabase = createSupabaseStub({
+    dashboardMembers: [
+      { id: "dm-editor", user_id: "editor-1", dashboard_id: "dashboard-1", role: "editor", status: "active" },
+    ],
+  });
+  const app = createApp({
+    supabase: supabase.client as AppDeps["supabase"],
+    genAI: { models: { async generateContent() { return { text: '{"intent":"REGISTRAR","items":[]}' }; } } },
+    allowedOrigins: ["http://localhost:5173"],
+    botActive: false,
+    publicAppUrl: "https://app.example.com",
+    resolveSession: async () => editorSession,
+  });
+  const server = app.listen(0);
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  try {
+    const address = server.address() as AddressInfo;
+    const res = await fetch(`http://127.0.0.1:${address.port}/api/dashboard/members/dm-editor/permissions`, {
+      method: "PATCH",
+      headers: { Authorization: "Bearer valid-token", "Content-Type": "application/json" },
+      body: JSON.stringify({ permissions: { export_drive: true } }),
+    });
+    assert.equal(res.status, 403);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
   }
 });
