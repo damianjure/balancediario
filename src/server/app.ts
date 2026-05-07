@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { filterMovementsForReport, resolveReportDateRange } from "../reports/shared.ts";
 import { buildReportFile } from "./reportExports.ts";
 import { getDriveAuthUrl, exchangeCodeForTokens, uploadFileToDrive, encryptToken, decryptToken } from "./drive.ts";
+import { sendAppInvitationEmail, sendDashboardInvitationEmail } from "./email.ts";
 import { SYSTEM_PROMPT, parseGeminiJsonResponse } from "./gemini.ts";
 import { isMissingSchemaArtifactError } from "./errors.ts";
 import {
@@ -1513,10 +1514,9 @@ export function createApp({
         .single();
       if (error) throw error;
 
-      res.status(201).json({
-        ...data,
-        invite_url: `${publicAppUrl || ""}/?invite=${data.invite_token}`,
-      });
+      const inviteUrl = `${publicAppUrl || ""}/?invite=${data.invite_token}`;
+      res.status(201).json({ ...data, invite_url: inviteUrl });
+      void sendAppInvitationEmail(data.email, inviteUrl);
     } catch (err) {
       console.error("Invitation error:", err);
       res.status(500).json({ error: "failed_to_save" });
@@ -1673,10 +1673,9 @@ export function createApp({
         if (globalInviteError) throw globalInviteError;
       }
 
-      res.status(201).json({
-        ...data,
-        invite_url: `${publicAppUrl || ""}/?invite=${data.invite_token}`,
-      });
+      const inviteUrl = `${publicAppUrl || ""}/?invite=${data.invite_token}`;
+      res.status(201).json({ ...data, invite_url: inviteUrl });
+      void sendDashboardInvitationEmail(data.email, inviteUrl, data.role, session.email);
     } catch (err) {
       console.error("Dashboard invitation error:", err);
       res.status(500).json({ error: "failed_to_save" });
