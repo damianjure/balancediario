@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useRef, type ReactNode } from 'react';
-import { AnimatePresence, useReducedMotion } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { toast } from "sonner";
 import {
   Send,
