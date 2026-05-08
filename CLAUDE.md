@@ -652,7 +652,7 @@ Runtime: `/Users/damian/Dev/Boteado/server.ts`
 | Env vars Drive en Cloud Run | ✔ configuradas 2026-05-07 |
 | Deploy backend Cloud Run | ✔ deployado 2026-05-07 |
 | Deploy frontend Firebase Hosting | ✔ deployado 2026-05-08 en `caja-chica-bot.web.app` |
-| `drop_pending_extractions.sql` en Supabase prod | ⚠ **PENDIENTE** (no rompe, tabla huérfana) |
+| `drop_pending_extractions.sql` en Supabase prod | ✔ aplicado 2026-05-08 |
 
 ---
 
@@ -756,12 +756,9 @@ Runtime: `/Users/damian/Dev/Boteado/server.ts`
 
 ## 20. Próximos pasos recomendados
 
-### Prioridad inmediata
-1. `drop_pending_extractions.sql` — aplicar en Supabase prod (tabla huérfana, sin riesgo)
-
 ### Prioridad media (features pendientes)
-2. CUIT matching en `resolveTelegramCompany()` — columna `empresas.cuit` existe, lógica no implementada
-3. Presupuesto UI — oculto con `{false && ...}` en `GastosTab.tsx`; API y datos intactos
+1. CUIT matching en `resolveTelegramCompany()` — columna `empresas.cuit` existe, lógica no implementada
+2. Presupuesto UI — oculto con `{false && ...}` en `GastosTab.tsx`; API y datos intactos
 
 ### Prioridad baja (cosmético)
 4. Renombrar imagen Docker/servicio Cloud Run `boteado-bot` → nombre nuevo (requiere redeploy)
@@ -791,4 +788,4 @@ Runtime: `/Users/damian/Dev/Boteado/server.ts`
 
 ## 22. Prompt correcto para retomar
 
-> Leé `/Users/damian/Dev/Boteado/CLAUDE.md`. Frontend en `caja-chica-bot.web.app`, backend en Cloud Run (`caja-chica-bot`). Tests: 145/147. Pendiente inmediato: aplicar `drop_pending_extractions.sql` en Supabase prod. Próximo feature: CUIT matching en bot Telegram.
+> Leé `/Users/damian/Dev/Boteado/CLAUDE.md`. Frontend en `caja-chica-bot.web.app`, backend en Cloud Run (`caja-chica-bot`). Tests: 145/147. Sin pendientes de infra. Próximo feature: CUIT matching en bot Telegram.
