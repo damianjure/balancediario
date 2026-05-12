@@ -83,7 +83,7 @@ export function LoginScreen({
             </button>
           )}
 
-          <p className="text-xs text-neutral-400 text-center pt-2">
+          <p className="text-xs text-neutral-500 text-center pt-2">
             Usá el mismo mail con el que te invitaron.
           </p>
         </div>

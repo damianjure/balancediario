@@ -193,7 +193,7 @@ export default function GastosTab({
                     <div className="mt-1 text-xs text-neutral-500">
                       {expense.empresa_nombre} · {expense.categoria}
                     </div>
-                    <div className="mt-1 text-[11px] text-neutral-400">{new Date(expense.created_at).toLocaleString('es-AR')}</div>
+                    <div className="mt-1 text-[11px] text-neutral-500">{new Date(expense.created_at).toLocaleString('es-AR')}</div>
                   </div>
                   <div className="text-sm font-semibold text-red-600">{formatCurrency(expense.monto, expense.moneda)}</div>
                 </div>

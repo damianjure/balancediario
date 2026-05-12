@@ -83,7 +83,7 @@ export function BotConnectionPanel() {
       ) : (
         <div className="space-y-4">
           <div className="rounded-2xl border border-neutral-200 px-4 py-4 flex flex-col gap-2">
-            <span className="text-xs uppercase tracking-wider text-neutral-400 font-semibold">
+            <span className="text-xs uppercase tracking-wider text-neutral-500 font-semibold">
               Estado
             </span>
             <span className="font-medium text-neutral-900">
@@ -141,6 +141,7 @@ export function BotConnectionPanel() {
                 <button
                   onClick={() => void copyValue(status.manualStartCode, "Comando copiado.")}
                   className="p-2 rounded-xl border border-neutral-200 hover:bg-white"
+                  aria-label="Copiar comando"
                   title="Copiar comando"
                 >
                   <Copy className="w-4 h-4" />

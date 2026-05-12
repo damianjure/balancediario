@@ -10,7 +10,7 @@ export function MetricCard({ label, value, tone = 'neutral' }: { label: string; 
 
   return (
     <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-sm">
-      <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest block mb-1">{label}</span>
+      <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{label}</span>
       <div className={`text-2xl font-bold ${toneClass}`}>{value}</div>
     </div>
   );

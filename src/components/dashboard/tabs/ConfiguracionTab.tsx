@@ -300,11 +300,11 @@ export default function ConfiguracionTab({
 
           {/* Permissions table */}
           {loading ? (
-            <div className="py-10 flex justify-center text-neutral-400">
+            <div className="py-10 flex justify-center text-neutral-500" role="status" aria-label="Cargando miembros">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
           ) : (
-            <div className="overflow-x-auto border-t border-neutral-100">
+            <div className="overflow-x-auto border-t border-neutral-100" aria-live="polite" aria-atomic="false">
               <table className="w-full min-w-[680px] text-sm">
                 <thead>
                   <tr className="bg-neutral-50 border-b border-neutral-100">
@@ -347,7 +347,7 @@ export default function ConfiguracionTab({
                           <div className="flex items-center gap-1.5 mt-1">
                             {roleBadge(member.role)}
                             {statusDot(member.status)}
-                            <span className="text-[11px] text-neutral-400">{member.status}</span>
+                            <span className="text-[11px] text-neutral-500">{member.status}</span>
                           </div>
                         </td>
 
@@ -385,7 +385,7 @@ export default function ConfiguracionTab({
                         {/* Actions */}
                         <td className="px-3 py-4 text-center">
                           {isUpdating ? (
-                            <Loader2 className="w-4 h-4 animate-spin text-neutral-400 mx-auto" />
+                            <Loader2 className="w-4 h-4 animate-spin text-neutral-500 mx-auto" />
                           ) : canRevoke ? (
                             <button
                               onClick={() => setRevokeConfirm({ id: member.id, email: member.email ?? member.user_id })}
@@ -404,7 +404,7 @@ export default function ConfiguracionTab({
                   })}
                   {(!data || data.members.length === 0) && (
                     <tr>
-                      <td colSpan={PERM_COLS.length + 2} className="px-6 py-8 text-center text-sm text-neutral-400">
+                      <td colSpan={PERM_COLS.length + 2} className="px-6 py-8 text-center text-sm text-neutral-500">
                         Todavía no hay miembros.
                       </td>
                     </tr>
@@ -417,7 +417,7 @@ export default function ConfiguracionTab({
           {/* Telegram invite per member */}
           {!loading && data && data.members.some((m) => m.status === "active") && (
             <div className="px-6 py-4 border-t border-neutral-100 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400">Invitar a Telegram</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500">Invitar a Telegram</p>
               <div className="flex flex-wrap gap-2">
                 {data.members.filter((m) => m.status === "active").map((member) => {
                   const activeToken = generatedToken?.userId === member.user_id ? generatedToken : null;
@@ -435,7 +435,7 @@ export default function ConfiguracionTab({
                         <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 space-y-1">
                           <div className="flex items-center justify-between gap-2">
                             <code className="text-xs font-mono text-neutral-800 break-all">/start {activeToken.token}</code>
-                            <button onClick={() => void handleCopyToken(activeToken.token)} className="shrink-0 p-1 rounded-lg hover:bg-neutral-200">
+                            <button onClick={() => void handleCopyToken(activeToken.token)} className="shrink-0 p-1 rounded-lg hover:bg-neutral-200" aria-label="Copiar token">
                               <Copy className="w-3 h-3 text-neutral-600" />
                             </button>
                           </div>
@@ -452,7 +452,7 @@ export default function ConfiguracionTab({
           {/* Pending invitations */}
           {!loading && data && data.invitations.length > 0 && (
             <div className="px-6 py-4 border-t border-neutral-100 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400">Invitaciones pendientes</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500">Invitaciones pendientes</p>
               <div className="space-y-2">
                 {data.invitations.map((inv) => (
                   <div key={inv.id} className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 px-4 py-3">
@@ -460,7 +460,7 @@ export default function ConfiguracionTab({
                       <div className="font-medium text-neutral-900 text-sm [overflow-wrap:anywhere]">{inv.email}</div>
                       <div className="flex items-center gap-2 mt-1">
                         {roleBadge(inv.role)}
-                        <span className="text-xs text-neutral-400">{inv.status}</span>
+                        <span className="text-xs text-neutral-500">{inv.status}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -490,14 +490,14 @@ export default function ConfiguracionTab({
           {/* Telegram links */}
           <div className="px-6 py-4 border-t border-neutral-100 space-y-3">
             <div className="flex items-center gap-2">
-              <MessageCircle className="w-3.5 h-3.5 text-neutral-400" />
-              <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400 flex-1">Vínculos Telegram</p>
-              <button onClick={loadTelegramLinks} className="text-xs text-neutral-400 hover:text-neutral-700">Actualizar</button>
+              <MessageCircle className="w-3.5 h-3.5 text-neutral-500" />
+              <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500 flex-1">Vínculos Telegram</p>
+              <button onClick={loadTelegramLinks} className="text-xs text-neutral-500 hover:text-neutral-700">Actualizar</button>
             </div>
             {loadingLinks ? (
               <div className="flex items-center gap-2 text-sm text-neutral-500"><Loader2 className="w-4 h-4 animate-spin" /> Cargando...</div>
             ) : telegramLinks.length === 0 ? (
-              <p className="text-sm text-neutral-400">No hay vínculos registrados.</p>
+              <p className="text-sm text-neutral-500">No hay vínculos registrados.</p>
             ) : (
               <div className="space-y-2">
                 {telegramLinks.map((link) => (
@@ -510,12 +510,12 @@ export default function ConfiguracionTab({
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {link.status === "pending_owner_confirm" && (
-                        <button onClick={() => void handleConfirmLink(link.id)} className="p-1.5 rounded-xl border border-green-200 text-green-600 hover:bg-green-50" title="Confirmar">
+                        <button onClick={() => void handleConfirmLink(link.id)} className="p-1.5 rounded-xl border border-green-200 text-green-600 hover:bg-green-50" aria-label="Confirmar vínculo" title="Confirmar">
                           <Check className="w-4 h-4" />
                         </button>
                       )}
                       {link.status !== "revoked" && (
-                        <button onClick={() => void handleRevokeLink(link.id)} className="p-1.5 rounded-xl border border-red-200 text-red-500 hover:bg-red-50" title="Revocar">
+                        <button onClick={() => void handleRevokeLink(link.id)} className="p-1.5 rounded-xl border border-red-200 text-red-500 hover:bg-red-50" aria-label="Revocar vínculo" title="Revocar">
                           <X className="w-4 h-4" />
                         </button>
                       )}
@@ -562,7 +562,7 @@ export default function ConfiguracionTab({
               onClick={() => void onDisconnectDrive()}
               className="w-full flex items-center gap-3 rounded-2xl border border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
             >
-              <HardDrive className="w-4 h-4 text-neutral-400" />
+              <HardDrive className="w-4 h-4 text-neutral-500" />
               Desconectar Google Drive
             </button>
           )}
@@ -582,7 +582,7 @@ export default function ConfiguracionTab({
             onClick={() => void onSignOut()}
             className="w-full flex items-center gap-3 rounded-2xl border border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
           >
-            <LogOut className="w-4 h-4 text-neutral-400" />
+            <LogOut className="w-4 h-4 text-neutral-500" />
             Cerrar sesión
           </button>
         </div>

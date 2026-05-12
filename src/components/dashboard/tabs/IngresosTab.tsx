@@ -65,7 +65,7 @@ export default function IngresosTab({
                     <div className="mt-1 text-xs text-neutral-500">
                       {income.empresa_nombre} · {income.categoria}
                     </div>
-                    <div className="mt-1 text-[11px] text-neutral-400">{new Date(income.created_at).toLocaleString('es-AR')}</div>
+                    <div className="mt-1 text-[11px] text-neutral-500">{new Date(income.created_at).toLocaleString('es-AR')}</div>
                   </div>
                   <div className="text-sm font-semibold text-green-600">{formatCurrency(income.monto, income.moneda)}</div>
                 </div>

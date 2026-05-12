@@ -270,7 +270,7 @@ export default function InformesTab({ history, companiesList, canWriteData, canU
             <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="text-xs font-bold uppercase tracking-widest text-neutral-400">Vista rápida</div>
+                  <div className="text-xs font-bold uppercase tracking-widest text-neutral-500">Vista rápida</div>
                   <div className="mt-1 text-lg font-semibold text-neutral-900">
                     {previewRange ? previewRange.label : "Configuración inválida"}
                   </div>
@@ -279,7 +279,7 @@ export default function InformesTab({ history, companiesList, canWriteData, canU
                   </p>
                 </div>
                 <div className="rounded-2xl bg-white px-4 py-3 text-right shadow-sm">
-                  <div className="text-xs uppercase tracking-widest text-neutral-400">Movimientos visibles</div>
+                  <div className="text-xs uppercase tracking-widest text-neutral-500">Movimientos visibles</div>
                   <div className="text-2xl font-semibold text-neutral-900">{previewMovements.length}</div>
                 </div>
               </div>

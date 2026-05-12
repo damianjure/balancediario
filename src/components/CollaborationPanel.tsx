@@ -259,7 +259,7 @@ export function CollaborationPanel({
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-widest text-neutral-400">
+            <h3 className="text-sm font-semibold uppercase tracking-widest text-neutral-500">
               Miembros
             </h3>
             <div className="space-y-3">
@@ -360,7 +360,7 @@ export function CollaborationPanel({
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-widest text-neutral-400">
+            <h3 className="text-sm font-semibold uppercase tracking-widest text-neutral-500">
               Invitaciones
             </h3>
             <div className="space-y-3">
@@ -412,8 +412,8 @@ export function CollaborationPanel({
       {canManage && (
         <div className="space-y-3 pt-2 border-t border-neutral-100">
           <div className="flex items-center gap-2">
-            <MessageCircle className="w-4 h-4 text-neutral-400" />
-            <h3 className="text-sm font-semibold uppercase tracking-widest text-neutral-400">
+            <MessageCircle className="w-4 h-4 text-neutral-500" />
+            <h3 className="text-sm font-semibold uppercase tracking-widest text-neutral-500">
               Vínculos Telegram
             </h3>
           </div>
