@@ -122,7 +122,7 @@ Integraciones principales:
 - [https://caja-chica-bot.web.app](https://caja-chica-bot.web.app) ← migrado 2026-05-08 desde `balancediario` (proyecto roto)
 
 ### Backend producción
-- [https://boteado-bot-442790495206.us-west2.run.app](https://boteado-bot-442790495206.us-west2.run.app)
+- [https://caja-chica-442790495206.us-west2.run.app](https://caja-chica-442790495206.us-west2.run.app)
 
 ### Firebase project (hosting + backend, unificado)
 - `caja-chica-bot`
@@ -151,8 +151,8 @@ firebase deploy --only hosting
 
 # Backend
 gcloud config set project caja-chica-bot
-gcloud builds submit --tag gcr.io/caja-chica-bot/boteado-bot --region us-west2
-gcloud run deploy boteado-bot --image gcr.io/caja-chica-bot/boteado-bot --region us-west2 --platform managed --quiet
+gcloud builds submit --tag gcr.io/caja-chica-bot/caja-chica --region us-west2
+gcloud run deploy caja-chica --image gcr.io/caja-chica-bot/caja-chica --region us-west2 --platform managed --quiet
 ```
 
 ### Estado de validación local más reciente
@@ -628,7 +628,7 @@ Runtime: `/Users/damian/Dev/Boteado/server.ts`
 | `DASHBOARD_URL` ausente: warning al arrancar si Drive habilitado | `src/server/app.ts` |
 
 ### Deuda de seguridad restante (baja prioridad)
-- Renombrar recursos GCP/Docker `boteado-bot` → nombre nuevo (cosmético, no urgente)
+- (ninguna pendiente)
 
 ---
 
@@ -640,8 +640,8 @@ Runtime: `/Users/damian/Dev/Boteado/server.ts`
 
 ### Backend
 - Cloud Run / proyecto GCP: `caja-chica-bot`
-- imagen: `gcr.io/caja-chica-bot/boteado-bot`
-- servicio Cloud Run: `boteado-bot` región `us-west2`
+- imagen: `gcr.io/caja-chica-bot/caja-chica`
+- servicio Cloud Run: `caja-chica` región `us-west2`
 
 ### Checklist de deploy (estado actual)
 | Paso | Estado |
@@ -685,7 +685,7 @@ Runtime: `/Users/damian/Dev/Boteado/server.ts`
 ### Google Drive ← configuradas en Cloud Run 2026-05-07
 - `GOOGLE_DRIVE_CLIENT_ID`
 - `GOOGLE_DRIVE_CLIENT_SECRET`
-- `GOOGLE_DRIVE_REDIRECT_URI` ← debe ser `https://boteado-bot-.../api/drive/callback`
+- `GOOGLE_DRIVE_REDIRECT_URI` ← debe ser `https://caja-chica-442790495206.us-west2.run.app/api/drive/callback`
 - `TOKEN_ENCRYPTION_KEY` ← base64 de 32 bytes: `openssl rand -base64 32`
 
 ### Email (Resend)
@@ -761,7 +761,7 @@ Runtime: `/Users/damian/Dev/Boteado/server.ts`
 2. Presupuesto UI — oculto con `{false && ...}` en `GastosTab.tsx`; API y datos intactos
 
 ### Prioridad baja (cosmético)
-4. Renombrar imagen Docker/servicio Cloud Run `boteado-bot` → nombre nuevo (requiere redeploy)
+- (ninguna pendiente)
 
 ---
 

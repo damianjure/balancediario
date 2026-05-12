@@ -94,7 +94,7 @@ Integraciones principales:
 - [https://caja-chica-bot.web.app](https://caja-chica-bot.web.app)
 
 ### Backend producción
-- [https://boteado-bot-442790495206.us-west2.run.app](https://boteado-bot-442790495206.us-west2.run.app)
+- [https://caja-chica-442790495206.us-west2.run.app](https://caja-chica-442790495206.us-west2.run.app)
 
 ### Firebase project
 - `caja-chica-bot`
@@ -130,8 +130,8 @@ firebase deploy --only hosting
 
 # Backend
 gcloud config set project caja-chica-bot
-gcloud builds submit --tag gcr.io/caja-chica-bot/boteado-bot --region us-west2
-gcloud run deploy boteado-bot --image gcr.io/caja-chica-bot/boteado-bot --region us-west2 --platform managed --quiet
+gcloud builds submit --tag gcr.io/caja-chica-bot/caja-chica --region us-west2
+gcloud run deploy caja-chica --image gcr.io/caja-chica-bot/caja-chica --region us-west2 --platform managed --quiet
 ```
 
 ---
@@ -678,8 +678,8 @@ Auditoría completa de código + seguridad + DB. Se identificaron y resolvieron 
 - Cloud Run / Node runtime
 - proyecto GCP: `caja-chica-bot`
 - contenedor: `Dockerfile` copia `server.ts` + `src/`
-- imagen: `gcr.io/caja-chica-bot/boteado-bot`
-- servicio Cloud Run: `boteado-bot` región `us-west2`
+- imagen: `gcr.io/caja-chica-bot/caja-chica`
+- servicio Cloud Run: `caja-chica` región `us-west2`
 
 ### Checklist antes de deployar (2026-05-07)
 1. Aplicar `drive_oauth_phase.sql` en Supabase prod
@@ -720,7 +720,7 @@ Auditoría completa de código + seguridad + DB. Se identificaron y resolvieron 
 ### Google Drive
 - `GOOGLE_DRIVE_CLIENT_ID`
 - `GOOGLE_DRIVE_CLIENT_SECRET`
-- `GOOGLE_DRIVE_REDIRECT_URI` ← debe ser `https://boteado-bot-.../api/drive/callback`
+- `GOOGLE_DRIVE_REDIRECT_URI` ← debe ser `https://caja-chica-442790495206.us-west2.run.app/api/drive/callback`
 - `TOKEN_ENCRYPTION_KEY` ← base64 de 32 bytes: `openssl rand -base64 32`
 
 ### Email (Resend) ← **nuevas, requeridas para notificaciones**
