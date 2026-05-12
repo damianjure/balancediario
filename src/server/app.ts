@@ -2227,7 +2227,17 @@ export function createApp({
         return res.status(400).json({ error: "permissions requerido (objeto)" });
       }
 
-      const allowed = ["delete_any", "export_drive", "invite_telegram", "manage_backups", "restore_backups"] as const;
+      const allowed = [
+        "delete_any",
+        "edit_any",
+        "export_drive",
+        "export_local",
+        "invite_telegram",
+        "manage_empresas",
+        "manage_categorias",
+        "manage_backups",
+        "restore_backups",
+      ] as const;
       const sanitized: Record<string, boolean> = {};
       for (const key of allowed) {
         if (key in permissions) sanitized[key] = Boolean(permissions[key]);

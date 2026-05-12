@@ -441,15 +441,18 @@ function UserDetailDrawer({
 }: UserDetailDrawerProps) {
   if (!isSuperadmin) return null;
   return (
-    <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden
-      />
-      <aside className="relative ml-auto h-full w-full sm:max-w-xl bg-white shadow-2xl overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between z-10">
-          <h3 className="font-bold text-neutral-900">Detalle de usuario</h3>
+        className="w-full max-w-2xl max-h-[90vh] bg-white rounded-3xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="px-6 py-4 border-b border-neutral-200 flex items-center justify-between shrink-0">
+          <h3 className="text-lg font-bold text-neutral-900">Detalle de usuario</h3>
           <button
             onClick={onClose}
             className="p-2 rounded-xl hover:bg-neutral-100"
@@ -457,16 +460,16 @@ function UserDetailDrawer({
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
+        </header>
 
-        <div className="p-6 space-y-6">
+        <div className="overflow-y-auto p-6 space-y-6">
           {loading || !detail ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
             </div>
           ) : (
             <>
-              <header className="space-y-1">
+              <section className="space-y-1">
                 <div className="font-bold text-neutral-900 [overflow-wrap:anywhere]">
                   {detail.user.email}
                 </div>
@@ -488,7 +491,7 @@ function UserDetailDrawer({
                     Último cambio: {new Date(detail.user.status_changed_at).toLocaleString()}
                   </p>
                 )}
-              </header>
+              </section>
 
               <section className="grid grid-cols-3 gap-3 text-center">
                 <Stat label="Movimientos" value={detail.stats.movimientos} />
@@ -501,25 +504,28 @@ function UserDetailDrawer({
                   Estado
                 </h4>
                 <div className="grid grid-cols-3 gap-2">
-                  <ActionButton
+                  <StatusButton
                     icon={<CheckCircle2 className="w-4 h-4" />}
-                    label="Activar"
+                    label="Activo"
+                    active={detail.user.status === "active"}
                     onClick={() => onStatusChange("active")}
-                    disabled={acting || detail.user.status === "active"}
+                    disabled={acting}
                     tone="green"
                   />
-                  <ActionButton
+                  <StatusButton
                     icon={<Pause className="w-4 h-4" />}
-                    label="Pausar"
+                    label="Pausado"
+                    active={detail.user.status === "paused"}
                     onClick={() => onStatusChange("paused")}
-                    disabled={acting || detail.user.status === "paused"}
+                    disabled={acting}
                     tone="amber"
                   />
-                  <ActionButton
+                  <StatusButton
                     icon={<Ban className="w-4 h-4" />}
-                    label="Bloquear"
+                    label="Bloqueado"
+                    active={detail.user.status === "blocked"}
                     onClick={() => onStatusChange("blocked")}
-                    disabled={acting || detail.user.status === "blocked"}
+                    disabled={acting}
                     tone="red"
                   />
                 </div>
@@ -544,23 +550,25 @@ function UserDetailDrawer({
                   Rol global
                 </h4>
                 <div className="flex gap-2 flex-wrap">
-                  {(["member", "admin", "superadmin"] as AppRole[]).map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => onRoleChange(r)}
-                      disabled={acting || detail.user.role === r}
-                      className={`px-3 py-2 rounded-xl border text-sm transition ${
-                        detail.user.role === r
-                          ? "bg-neutral-900 text-white border-neutral-900 cursor-default"
-                          : "bg-white border-neutral-200 hover:border-neutral-400 disabled:opacity-50"
-                      }`}
-                    >
-                      <span className="inline-flex items-center gap-1.5">
+                  {(["member", "admin", "superadmin"] as AppRole[]).map((r) => {
+                    const isCurrent = detail.user.role === r;
+                    return (
+                      <button
+                        key={r}
+                        onClick={() => onRoleChange(r)}
+                        disabled={acting || isCurrent}
+                        className={`px-3 py-2 rounded-xl border text-sm font-medium transition inline-flex items-center gap-1.5 ${
+                          isCurrent
+                            ? "bg-neutral-900 text-white border-neutral-900 cursor-default"
+                            : "bg-white border-neutral-200 hover:border-neutral-400 disabled:opacity-50"
+                        }`}
+                      >
                         <ShieldCheck className="w-3.5 h-3.5" />
                         {r}
-                      </span>
-                    </button>
-                  ))}
+                        {isCurrent && <span className="ml-1 text-[10px] uppercase tracking-widest opacity-80">actual</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </section>
 
@@ -597,8 +605,44 @@ function UserDetailDrawer({
             </>
           )}
         </div>
-      </aside>
+      </div>
     </div>
+  );
+}
+
+interface StatusButtonProps {
+  icon: ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  tone: "green" | "amber" | "red";
+}
+
+function StatusButton({ icon, label, active, onClick, disabled, tone }: StatusButtonProps) {
+  const activeClass = {
+    green: "bg-green-600 border-green-600 text-white shadow-md ring-2 ring-green-200",
+    amber: "bg-amber-500 border-amber-500 text-white shadow-md ring-2 ring-amber-200",
+    red: "bg-red-600 border-red-600 text-white shadow-md ring-2 ring-red-200",
+  }[tone];
+  const inactiveClass = {
+    green: "bg-white border-green-200 text-green-700 hover:bg-green-50",
+    amber: "bg-white border-amber-200 text-amber-700 hover:bg-amber-50",
+    red: "bg-white border-red-200 text-red-700 hover:bg-red-50",
+  }[tone];
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || active}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-semibold transition disabled:opacity-100 disabled:cursor-default ${
+        active ? activeClass : inactiveClass
+      }`}
+      aria-pressed={active}
+    >
+      {icon}
+      <span>{label}</span>
+      {active && <CheckCircle2 className="w-3.5 h-3.5" />}
+    </button>
   );
 }
 

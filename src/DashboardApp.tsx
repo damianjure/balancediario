@@ -121,9 +121,34 @@ function normalizeMovement(item: Movimiento): Movimiento {
   };
 }
 
+const ACTIVE_TAB_STORAGE_KEY = 'caja-chica:activeTab';
+const VALID_TABS: ReadonlyArray<DashboardTab> = [
+  'resumen', 'movimientos', 'gastos', 'ingresos', 'empresas', 'superadmin', 'configuracion',
+];
+
+function readPersistedTab(): DashboardTab {
+  try {
+    const stored = window.localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
+    if (stored && (VALID_TABS as ReadonlyArray<string>).includes(stored)) {
+      return stored as DashboardTab;
+    }
+  } catch {
+    /* ignore */
+  }
+  return 'resumen';
+}
+
 export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme }: DashboardAppProps) {
   const initialBudgetPeriod = getCurrentPeriod();
-  const [activeTab, setActiveTab] = useState<DashboardTab>('resumen');
+  const [activeTab, setActiveTab] = useState<DashboardTab>(readPersistedTab);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, activeTab);
+    } catch {
+      /* ignore */
+    }
+  }, [activeTab]);
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [history, setHistory] = useState<Movimiento[]>([]);
