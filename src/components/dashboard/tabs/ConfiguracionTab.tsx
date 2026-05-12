@@ -1,15 +1,19 @@
 import { useState, useMemo } from "react";
 import {
+  Bell,
   Check,
   Copy,
+  Download,
   HardDrive,
   Loader2,
   Lock,
   LogOut,
   MessageCircle,
+  Monitor,
   Settings,
   Smartphone,
   SlidersHorizontal,
+  Trash2,
   UserMinus,
   UserPlus,
   Users,
@@ -23,6 +27,7 @@ import {
   type DashboardMembersResponse,
   type MemberPermissions,
   type TelegramLink,
+  type UserSession,
 } from "../../../services/api";
 import { ConfirmModal } from "../../ui/ConfirmModal";
 import { ThemeSelector, type ThemePreference } from "../../ThemeToggle";
@@ -98,6 +103,23 @@ export default function ConfiguracionTab({
     else window.localStorage.removeItem(PREF_EMPRESA_KEY);
   };
 
+  // display name
+  const [displayName, setDisplayName] = useState(viewer.display_name ?? "");
+  const [savingDisplayName, setSavingDisplayName] = useState(false);
+
+  // notification hour
+  const [notifHour, setNotifHour] = useState(viewer.notification_hour ?? 21);
+  const [savingNotifHour, setSavingNotifHour] = useState(false);
+
+  // sessions
+  const [sessions, setSessions] = useState<UserSession[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+  const [sessionsLoaded, setSessionsLoaded] = useState(false);
+  const [revokingSession, setRevokingSession] = useState<string | null>(null);
+
+  // delete account
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<DashboardInvitationRole>("viewer");
   const [submitting, setSubmitting] = useState(false);
@@ -128,6 +150,65 @@ export default function ConfiguracionTab({
   const showNotice = (msg: string) => {
     setNotice(msg);
     setTimeout(() => setNotice(null), 3000);
+  };
+
+  const handleSaveDisplayName = async () => {
+    setSavingDisplayName(true);
+    try {
+      await api.updateMe({ display_name: displayName.trim() || null });
+      showNotice("Nombre guardado");
+    } catch {
+      setError("No se pudo guardar el nombre.");
+    } finally {
+      setSavingDisplayName(false);
+    }
+  };
+
+  const handleSaveNotifHour = async (h: number) => {
+    setNotifHour(h);
+    setSavingNotifHour(true);
+    try {
+      await api.updateMe({ notification_hour: h });
+    } catch {
+      setError("No se pudo guardar la hora.");
+    } finally {
+      setSavingNotifHour(false);
+    }
+  };
+
+  const handleExportData = () => {
+    window.open(api.getExportUrl(), "_blank");
+  };
+
+  const loadSessions = async () => {
+    setLoadingSessions(true);
+    try {
+      const r = await api.getMySessionsList();
+      setSessions(r.sessions);
+      setSessionsLoaded(true);
+    } catch {
+      setError("No se pudieron cargar las sesiones.");
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
+
+  const handleRevokeSession = async (sessionId: string) => {
+    setRevokingSession(sessionId);
+    try {
+      await api.revokeMySession(sessionId);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      showNotice("Sesión cerrada");
+    } catch {
+      setError("No se pudo cerrar la sesión.");
+    } finally {
+      setRevokingSession(null);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    await api.deleteMyAccount();
+    await onSignOut();
   };
 
   const loadTelegramLinks = () => {
@@ -616,6 +697,30 @@ export default function ConfiguracionTab({
             </select>
             <p className="text-[11px] text-neutral-500">Se resalta en el selector de empresa al registrar un ticket.</p>
           </div>
+
+          {/* Notification hour */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500">Hora del recordatorio</p>
+              {savingNotifHour && <Loader2 className="w-3 h-3 animate-spin text-neutral-500" />}
+            </div>
+            <div className="flex items-center gap-3">
+              <Bell className="w-4 h-4 text-neutral-500 shrink-0" />
+              <input
+                type="range"
+                min={0}
+                max={23}
+                value={notifHour}
+                onChange={(e) => void handleSaveNotifHour(Number(e.target.value))}
+                className="flex-1 accent-neutral-900"
+                aria-label="Hora del recordatorio diario"
+              />
+              <span className="w-14 text-sm font-mono text-neutral-700 text-right">
+                {String(notifHour).padStart(2, "0")}:00 hs
+              </span>
+            </div>
+            <p className="text-[11px] text-neutral-500">El bot te manda el recordatorio a esta hora (UTC). Actualmente el recordatorio llega por Telegram.</p>
+          </div>
         </div>
       </section>
 
@@ -647,6 +752,32 @@ export default function ConfiguracionTab({
           </div>
         </div>
 
+        {/* Display name */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500">Nombre visible</p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder={viewer.email}
+              maxLength={50}
+              aria-label="Nombre visible"
+              className="flex-1 rounded-2xl border border-neutral-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-neutral-900"
+            />
+            <button
+              type="button"
+              onClick={() => void handleSaveDisplayName()}
+              disabled={savingDisplayName}
+              className="inline-flex items-center gap-1.5 rounded-2xl bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+            >
+              {savingDisplayName ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              Guardar
+            </button>
+          </div>
+          <p className="text-[11px] text-neutral-500">Lo ven otros miembros del dashboard.</p>
+        </div>
+
         <div className="space-y-3">
           {canConnectDrive && onDisconnectDrive && (
             <button
@@ -657,6 +788,15 @@ export default function ConfiguracionTab({
               Desconectar Google Drive
             </button>
           )}
+
+          {/* Export data */}
+          <button
+            onClick={handleExportData}
+            className="w-full flex items-center gap-3 rounded-2xl border border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+          >
+            <Download className="w-4 h-4 text-neutral-500" />
+            Exportar mis datos (JSON)
+          </button>
 
           {isNonOwnerMember && (
             <button
@@ -676,6 +816,63 @@ export default function ConfiguracionTab({
             <LogOut className="w-4 h-4 text-neutral-500" />
             Cerrar sesión
           </button>
+        </div>
+
+        {/* Active sessions */}
+        <div className="space-y-3 border-t border-neutral-100 pt-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500">Sesiones activas</p>
+            {!sessionsLoaded && (
+              <button
+                onClick={() => void loadSessions()}
+                disabled={loadingSessions}
+                className="text-xs text-neutral-500 hover:text-neutral-700 flex items-center gap-1"
+              >
+                {loadingSessions ? <Loader2 className="w-3 h-3 animate-spin" /> : <Monitor className="w-3 h-3" />}
+                Ver sesiones
+              </button>
+            )}
+          </div>
+          {sessionsLoaded && (
+            <div className="space-y-2">
+              {sessions.length === 0 ? (
+                <p className="text-sm text-neutral-500">No hay sesiones activas.</p>
+              ) : (
+                sessions.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 px-4 py-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-medium text-neutral-700 truncate">{s.user_agent ?? "Dispositivo desconocido"}</div>
+                      <div className="text-[11px] text-neutral-500 mt-0.5">
+                        Iniciada {new Date(s.created_at).toLocaleString("es-AR")}
+                        {s.not_after && ` · Expira ${new Date(s.not_after).toLocaleString("es-AR")}`}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => void handleRevokeSession(s.id)}
+                      disabled={revokingSession === s.id}
+                      aria-label="Cerrar esta sesión"
+                      className="p-1.5 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-50 shrink-0"
+                      title="Cerrar sesión"
+                    >
+                      {revokingSession === s.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Delete account */}
+        <div className="border-t border-red-100 pt-4">
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full flex items-center gap-3 rounded-2xl border border-red-200 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            Borrar mi cuenta
+          </button>
+          <p className="text-[11px] text-neutral-500 mt-2 px-1">Esta acción es permanente e irreversible. Exportá tus datos antes.</p>
         </div>
       </section>
 
@@ -702,6 +899,21 @@ export default function ConfiguracionTab({
             await handleLeaveDashboard();
           }}
           onCancel={() => setShowLeaveConfirm(false)}
+        />
+      )}
+
+      {showDeleteConfirm && (
+        <ConfirmModal
+          title="Borrar mi cuenta"
+          description={`Vas a eliminar permanentemente tu cuenta (${viewer.email}). Se borrarán tus datos y no podrás recuperarlos. Escribí tu email para confirmar.`}
+          confirmLabel="Borrar cuenta"
+          tone="danger"
+          requireText={viewer.email}
+          onConfirm={async () => {
+            setShowDeleteConfirm(false);
+            await handleDeleteAccount();
+          }}
+          onCancel={() => setShowDeleteConfirm(false)}
         />
       )}
     </div>

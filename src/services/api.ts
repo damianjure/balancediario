@@ -133,6 +133,15 @@ export interface AppViewer {
   email: string;
   role: AppRole;
   status: AppUserStatus;
+  display_name?: string | null;
+  notification_hour?: number | null;
+}
+
+export interface UserSession {
+  id: string;
+  created_at: string;
+  not_after: string | null;
+  user_agent: string | null;
 }
 
 export interface MemberPermissions {
@@ -521,5 +530,25 @@ export const api = {
 
   async leaveDashboard(): Promise<void> {
     return fetchApi("/api/dashboard/leave", { method: "POST" });
+  },
+
+  async updateMe(fields: { display_name?: string | null; notification_hour?: number }): Promise<void> {
+    return fetchApi("/api/me", { method: "PATCH", body: JSON.stringify(fields) });
+  },
+
+  async getMySessionsList(): Promise<{ sessions: UserSession[] }> {
+    return fetchApi("/api/me/sessions");
+  },
+
+  async revokeMySession(sessionId: string): Promise<void> {
+    return fetchApi(`/api/me/sessions/${sessionId}`, { method: "DELETE" });
+  },
+
+  async deleteMyAccount(): Promise<void> {
+    return fetchApi("/api/me", { method: "DELETE" });
+  },
+
+  getExportUrl(): string {
+    return `${API_BASE}/api/me/export`;
   },
 };

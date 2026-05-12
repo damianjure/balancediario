@@ -37,6 +37,12 @@ function unrefInterval(timer: ReturnType<typeof setInterval>) {
 
 export interface SupabaseLike {
   from(table: string): any;
+  rpc(fn: string, args?: Record<string, unknown>): PromiseLike<{ data: any; error: any }>;
+  auth: {
+    admin: {
+      deleteUser(userId: string): Promise<{ error: any }>;
+    };
+  };
 }
 
 export interface GenAILike {
@@ -579,14 +585,120 @@ export function createApp({
     next();
   };
 
-  app.get("/api/me", requireSession, (req, res) => {
+  app.get("/api/me", requireSession, async (req, res) => {
     const session = getSession(req);
+    const { data } = await supabase
+      .from("app_users")
+      .select("display_name, notification_hour")
+      .eq("user_id", session.userId)
+      .single();
     res.json({
       id: session.userId,
       email: session.email,
       role: session.role,
       status: session.status,
+      display_name: data?.display_name ?? null,
+      notification_hour: data?.notification_hour ?? 21,
     });
+  });
+
+  app.patch("/api/me", requireSession, async (req, res) => {
+    const session = getSession(req);
+    const body = req.body as { display_name?: string | null; notification_hour?: number };
+    const updates: Record<string, unknown> = {};
+
+    if ("display_name" in body) {
+      updates.display_name = body.display_name ? String(body.display_name).trim().slice(0, 50) : null;
+    }
+    if ("notification_hour" in body) {
+      const h = Number(body.notification_hour);
+      if (!Number.isInteger(h) || h < 0 || h > 23) {
+        res.status(400).json({ error: "notification_hour must be 0–23" });
+        return;
+      }
+      updates.notification_hour = h;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ error: "No fields to update" });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("app_users")
+      .update(updates)
+      .eq("user_id", session.userId);
+
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json({ ok: true });
+  });
+
+  app.get("/api/me/export", requireSession, async (req, res) => {
+    const session = getSession(req);
+    const scope = await resolveDataAccessScope(session);
+    const scopeFilter = scope.dashboardId
+      ? { col: "dashboard_id", val: scope.dashboardId }
+      : { col: "owner_user_id", val: session.userId };
+
+    const [mov, emp, cat] = await Promise.all([
+      supabase.from("movimientos").select("*").eq(scopeFilter.col, scopeFilter.val).is("deleted_at", null),
+      supabase.from("empresas").select("*").eq(scopeFilter.col, scopeFilter.val).is("deleted_at", null),
+      supabase.from("categorias").select("*").eq(scopeFilter.col, scopeFilter.val),
+    ]);
+
+    const filename = `caja-chica-export-${new Date().toISOString().slice(0, 10)}.json`;
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.json({
+      exported_at: new Date().toISOString(),
+      user: { id: session.userId, email: session.email },
+      movimientos: mov.data ?? [],
+      empresas: emp.data ?? [],
+      categorias: cat.data ?? [],
+    });
+  });
+
+  app.get("/api/me/sessions", requireSession, async (req, res) => {
+    const session = getSession(req);
+    const { data, error } = await supabase.rpc("get_my_sessions", { target_user_id: session.userId });
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json({ sessions: data ?? [] });
+  });
+
+  app.delete("/api/me/sessions/:sessionId", requireSession, async (req, res) => {
+    const session = getSession(req);
+    const { error } = await supabase.rpc("delete_user_session", {
+      target_session_id: req.params.sessionId,
+      target_user_id: session.userId,
+    });
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json({ ok: true });
+  });
+
+  app.delete("/api/me", requireSession, async (req, res) => {
+    const session = getSession(req);
+    // Remove from non-owned dashboard memberships
+    await supabase
+      .from("dashboard_members")
+      .delete()
+      .eq("user_id", session.userId)
+      .neq("role", "owner");
+    // Hard delete auth user — cascades auth.sessions automatically
+    const { error } = await supabase.auth.admin.deleteUser(session.userId);
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return;
+    }
+    res.json({ ok: true });
   });
 
   app.get("/api/bot/connection", requireSession, async (req, res) => {

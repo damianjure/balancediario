@@ -2038,10 +2038,32 @@ if (bot) {
   }
 
   // --- CRON JOBS ---
-  cron.schedule('0 21 * * *', async () => {
-    const { data: users } = await supabase.from('usuarios').select('chat_id').eq('reminders_enabled', true);
-    for (const u of users ?? []) {
+  cron.schedule('0 * * * *', async () => {
+    const currentHour = new Date().getUTCHours();
+
+    const { data: telegramUsers } = await supabase
+      .from('usuarios')
+      .select('chat_id, user_id')
+      .eq('reminders_enabled', true)
+      .not('chat_id', 'is', null);
+
+    if (!telegramUsers?.length) return;
+
+    const userIds = telegramUsers.map((u) => u.user_id).filter(Boolean) as string[];
+
+    const { data: appUsers } = await supabase
+      .from('app_users')
+      .select('user_id, notification_hour')
+      .in('user_id', userIds);
+
+    const hourMap = new Map<string, number>(
+      appUsers?.map((u) => [u.user_id, u.notification_hour ?? 21]) ?? [],
+    );
+
+    for (const u of telegramUsers) {
       if (!u.chat_id) continue;
+      const notifHour = hourMap.get(u.user_id) ?? 21;
+      if (notifHour !== currentHour) continue;
       try {
         await bot.api.sendMessage(u.chat_id, "🔔 *Recordatorio:* No te olvides de registrar tus gastos del día. 💸", { parse_mode: "Markdown" });
       } catch (err) {

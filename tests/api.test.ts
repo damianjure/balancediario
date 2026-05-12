@@ -335,6 +335,8 @@ test("devuelve perfil para usuario autenticado activo", async () => {
         email: "member@example.com",
         role: "member",
         status: "active",
+        display_name: null,
+        notification_hour: 21,
       });
     },
   );
