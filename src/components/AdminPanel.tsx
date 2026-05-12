@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import {
-  AlertTriangle,
   Ban,
   CheckCircle2,
   Copy,
@@ -11,9 +10,9 @@ import {
   Shield,
   ShieldCheck,
   UserPlus,
-  X,
   XCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   api,
@@ -73,25 +72,16 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
   const [submitting, setSubmitting] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<AppRole>("member");
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [detail, setDetail] = useState<AdminUserDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [acting, setActing] = useState(false);
+  const [actingKey, setActingKey] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
 
   const isSuperadmin = viewer.role === "superadmin";
 
-  useEffect(() => {
-    if (!notice) return;
-    const t = setTimeout(() => setNotice(null), 3000);
-    return () => clearTimeout(t);
-  }, [notice]);
-
   const loadAdminData = async () => {
     setLoading(true);
-    setError(null);
     try {
       const [loadedUsers, loadedInvitations] = await Promise.all([
         api.getAdminUsers(),
@@ -100,11 +90,7 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
       setUsers(loadedUsers);
       setInvitations(loadedInvitations);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "No se pudieron cargar los datos de admin.",
-      );
+      toast.error(err instanceof Error ? err.message : "No se pudieron cargar los datos de admin.");
     } finally {
       setLoading(false);
     }
@@ -124,7 +110,7 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
       .getAdminUserDetail(selectedUserId)
       .then(setDetail)
       .catch((err) =>
-        setError(err instanceof Error ? err.message : "No se pudo cargar el detalle."),
+        toast.error(err instanceof Error ? err.message : "No se pudo cargar el detalle."),
       )
       .finally(() => setDetailLoading(false));
   }, [selectedUserId]);
@@ -132,7 +118,6 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
   const handleInvite = async () => {
     if (!email.trim()) return;
     setSubmitting(true);
-    setError(null);
     try {
       const invitation = await api.inviteUser(email.trim(), role);
       setInvitations((prev) => [
@@ -141,9 +126,9 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
       ]);
       setEmail("");
       setRole("member");
-      setNotice(`Invitación creada para ${invitation.email}`);
+      toast.success(`Invitación creada para ${invitation.email}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo crear la invitación.");
+      toast.error(err instanceof Error ? err.message : "No se pudo crear la invitación.");
     } finally {
       setSubmitting(false);
     }
@@ -151,7 +136,7 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
 
   const handleCopy = async (invitation: AppInvitation) => {
     await navigator.clipboard.writeText(invitation.invite_url);
-    setNotice(`Link copiado para ${invitation.email}`);
+    toast.success(`Link copiado para ${invitation.email}`);
   };
 
   const handleRevokeInvitation = async (invitationId: string) => {
@@ -163,13 +148,18 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
         ),
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo revocar la invitación.");
+      toast.error(err instanceof Error ? err.message : "No se pudo revocar la invitación.");
     }
   };
 
-  const requestStatusChange = (newStatus: ActionableStatus) => {
-    if (!detail) return;
-    const target = detail.user.email;
+  const requestStatusChange = (
+    newStatus: ActionableStatus,
+    userId?: string,
+    userEmail?: string,
+  ) => {
+    const targetId = userId ?? detail?.user.user_id;
+    const target = userEmail ?? detail?.user.email;
+    if (!targetId || !target) return;
     const verb =
       newStatus === "paused"
         ? "pausar"
@@ -187,9 +177,7 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
       description: `Vas a ${verb} a ${target}.`,
       details:
         newStatus === "blocked" ? (
-          <p>
-            El usuario se desconecta y no puede volver a entrar hasta que lo actives.
-          </p>
+          <p>El usuario se desconecta y no puede volver a entrar hasta que lo actives.</p>
         ) : newStatus === "paused" ? (
           <p>El usuario puede consultar datos pero no podrá cargar ni borrar.</p>
         ) : (
@@ -200,13 +188,11 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
       requireText: newStatus === "blocked" ? target : undefined,
       askReason: newStatus !== "active",
       run: async (reason) => {
-        setActing(true);
+        setActingKey("status");
         try {
-          await api.setUserStatus(detail.user.user_id, newStatus, reason);
+          await api.setUserStatus(targetId, newStatus, reason);
           setUsers((prev) =>
-            prev.map((u) =>
-              u.user_id === detail.user.user_id ? { ...u, status: newStatus } : u,
-            ),
+            prev.map((u) => (u.user_id === targetId ? { ...u, status: newStatus } : u)),
           );
           setDetail((prev) =>
             prev
@@ -221,12 +207,12 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
                 }
               : prev,
           );
-          setNotice(`${target} → ${newStatus}`);
+          toast.success(`${target} → ${newStatus}`);
           setPendingConfirm(null);
         } catch (err) {
-          setError(err instanceof Error ? err.message : "No se pudo cambiar el estado.");
+          toast.error(err instanceof Error ? err.message : "No se pudo cambiar el estado.");
         } finally {
-          setActing(false);
+          setActingKey(null);
         }
       },
     });
@@ -245,17 +231,15 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
       tone: "danger",
       requireText: target,
       run: async () => {
-        setActing(true);
+        setActingKey("logout");
         try {
           await api.forceLogoutUser(detail.user.user_id);
-          setNotice("Sesiones cerradas");
+          toast.success("Sesiones cerradas");
           setPendingConfirm(null);
         } catch (err) {
-          setError(
-            err instanceof Error ? err.message : "No se pudo forzar logout.",
-          );
+          toast.error(err instanceof Error ? err.message : "No se pudo forzar logout.");
         } finally {
-          setActing(false);
+          setActingKey(null);
         }
       },
     });
@@ -271,7 +255,7 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
       tone: newRole === "superadmin" ? "danger" : "neutral",
       requireText: newRole === "superadmin" ? target : undefined,
       run: async () => {
-        setActing(true);
+        setActingKey("role");
         try {
           await api.setUserRole(detail.user.user_id, newRole);
           setUsers((prev) =>
@@ -282,12 +266,12 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
           setDetail((prev) =>
             prev ? { ...prev, user: { ...prev.user, role: newRole } } : prev,
           );
-          setNotice(`Rol actualizado → ${newRole}`);
+          toast.success(`Rol actualizado → ${newRole}`);
           setPendingConfirm(null);
         } catch (err) {
-          setError(err instanceof Error ? err.message : "No se pudo cambiar rol.");
+          toast.error(err instanceof Error ? err.message : "No se pudo cambiar rol.");
         } finally {
-          setActing(false);
+          setActingKey(null);
         }
       },
     });
@@ -302,7 +286,7 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
       confirmLabel: "Revocar",
       tone: "danger",
       run: async () => {
-        setActing(true);
+        setActingKey("telegram");
         try {
           await api.adminRevokeTelegramLink(linkId);
           setDetail((prev) =>
@@ -315,12 +299,12 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
                 }
               : prev,
           );
-          setNotice("Vínculo revocado");
+          toast.success("Vínculo revocado");
           setPendingConfirm(null);
         } catch (err) {
-          setError(err instanceof Error ? err.message : "No se pudo revocar.");
+          toast.error(err instanceof Error ? err.message : "No se pudo revocar.");
         } finally {
-          setActing(false);
+          setActingKey(null);
         }
       },
     });
@@ -339,33 +323,6 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
           </p>
         </div>
       </div>
-
-      {error && (
-        <div
-          role="alert"
-          className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-start gap-2"
-        >
-          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-          <span className="flex-1">{error}</span>
-          <button
-            type="button"
-            onClick={() => setError(null)}
-            className="text-red-600 hover:text-red-800"
-            aria-label="Descartar error"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-      {notice && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="rounded-2xl border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800"
-        >
-          {notice}
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.6fr)_minmax(0,0.8fr)_auto] gap-3">
         <input
@@ -416,7 +373,11 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
             users={users}
             viewerId={viewer.id}
             isSuperadmin={isSuperadmin}
+            actingKey={actingKey}
             onSelect={setSelectedUserId}
+            onQuickStatus={(userId, email, newStatus) =>
+              requestStatusChange(newStatus, userId, email)
+            }
           />
 
           <div className="space-y-3">
@@ -478,7 +439,7 @@ export function AdminPanel({ viewer }: AdminPanelProps) {
         <UserDetailModal
           loading={detailLoading}
           detail={detail}
-          acting={acting}
+          actingKey={actingKey}
           onClose={() => setSelectedUserId(null)}
           onStatusChange={requestStatusChange}
           onForceLogout={requestForceLogout}
@@ -508,10 +469,12 @@ interface UsersListProps {
   users: AppUser[];
   viewerId: string;
   isSuperadmin: boolean;
+  actingKey: string | null;
   onSelect: (userId: string) => void;
+  onQuickStatus: (userId: string, email: string, newStatus: ActionableStatus) => void;
 }
 
-function UsersList({ users, viewerId, isSuperadmin, onSelect }: UsersListProps) {
+function UsersList({ users, viewerId, isSuperadmin, actingKey, onSelect, onQuickStatus }: UsersListProps) {
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold uppercase tracking-widest text-neutral-600">
@@ -525,42 +488,84 @@ function UsersList({ users, viewerId, isSuperadmin, onSelect }: UsersListProps) 
           return (
             <div
               key={user.user_id}
-              className="border border-neutral-300 rounded-2xl px-4 py-3 min-w-0 flex items-center justify-between gap-3"
+              className="border border-neutral-300 rounded-2xl px-4 py-3 min-w-0 flex flex-col gap-3"
             >
-              <div className="min-w-0 flex-1">
-                <div className="font-medium text-neutral-900 [overflow-wrap:anywhere]">
-                  {user.email}
-                  {isSelf && (
-                    <span className="ml-2 text-xs text-neutral-500">(vos)</span>
-                  )}
+              <div className="flex items-center justify-between gap-3 min-w-0">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-neutral-900 [overflow-wrap:anywhere]">
+                    {user.email}
+                    {isSelf && (
+                      <span className="ml-2 text-xs text-neutral-500">(vos)</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-neutral-600 mt-1 flex items-center gap-2 flex-wrap">
+                    <span>{user.role}</span>
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded-full text-[11px] border ${badge.className}`}
+                      aria-label={`Estado: ${badge.label}`}
+                    >
+                      {badge.label}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-xs text-neutral-600 mt-1 flex items-center gap-2 flex-wrap">
-                  <span>{user.role}</span>
-                  <span
-                    className={`inline-block px-2 py-0.5 rounded-full text-[11px] border ${badge.className}`}
-                    aria-label={`Estado: ${badge.label}`}
+                {clickable ? (
+                  <button
+                    type="button"
+                    onClick={() => onSelect(user.user_id)}
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-neutral-300 px-3 py-2 text-sm font-medium hover:bg-neutral-50 hover:border-neutral-400"
+                    aria-label={`Administrar ${user.email}`}
                   >
-                    {badge.label}
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Administrar
+                  </button>
+                ) : (
+                  <span
+                    className="shrink-0 text-xs text-neutral-500 italic"
+                    title="No podés administrar tu propia cuenta"
+                  >
+                    protegido
                   </span>
-                </div>
+                )}
               </div>
-              {clickable ? (
-                <button
-                  type="button"
-                  onClick={() => onSelect(user.user_id)}
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-neutral-300 px-3 py-2 text-sm font-medium hover:bg-neutral-50 hover:border-neutral-400"
-                  aria-label={`Administrar ${user.email}`}
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Administrar
-                </button>
-              ) : (
-                <span
-                  className="shrink-0 text-xs text-neutral-500 italic"
-                  title="No podés administrar tu propia cuenta"
-                >
-                  protegido
-                </span>
+              {clickable && (
+                <div className="flex gap-2" role="group" aria-label={`Estado de ${user.email}`}>
+                  {([
+                    { status: "active" as const, icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: "Activar", tone: "green" },
+                    { status: "paused" as const, icon: <Pause className="w-3.5 h-3.5" />, label: "Pausar", tone: "amber" },
+                    { status: "blocked" as const, icon: <Ban className="w-3.5 h-3.5" />, label: "Bloquear", tone: "red" },
+                  ] as const).map(({ status, icon, label, tone }) => {
+                    const isCurrent = user.status === status;
+                    const isActing = actingKey === "status";
+                    const activeClass = {
+                      green: "bg-green-600 border-green-600 text-white ring-2 ring-green-200",
+                      amber: "bg-amber-500 border-amber-500 text-white ring-2 ring-amber-200",
+                      red: "bg-red-600 border-red-600 text-white ring-2 ring-red-200",
+                    }[tone];
+                    const inactiveClass = {
+                      green: "bg-white border-green-300 text-green-800 hover:bg-green-50",
+                      amber: "bg-white border-amber-300 text-amber-800 hover:bg-amber-50",
+                      red: "bg-white border-red-300 text-red-800 hover:bg-red-50",
+                    }[tone];
+                    return (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() => !isCurrent && onQuickStatus(user.user_id, user.email, status)}
+                        disabled={isActing || isCurrent}
+                        aria-pressed={isCurrent}
+                        aria-label={isCurrent ? `${label} (estado actual)` : `Cambiar a ${label}`}
+                        className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs font-medium transition disabled:opacity-60 disabled:cursor-default ${isCurrent ? activeClass : inactiveClass}`}
+                      >
+                        {isActing && isCurrent ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          icon
+                        )}
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
           );
@@ -576,7 +581,7 @@ function UsersList({ users, viewerId, isSuperadmin, onSelect }: UsersListProps) 
 interface UserDetailModalProps {
   loading: boolean;
   detail: AdminUserDetail | null;
-  acting: boolean;
+  actingKey: string | null;
   onClose: () => void;
   onStatusChange: (status: ActionableStatus) => void;
   onForceLogout: () => void;
@@ -587,13 +592,14 @@ interface UserDetailModalProps {
 function UserDetailModal({
   loading,
   detail,
-  acting,
+  actingKey,
   onClose,
   onStatusChange,
   onForceLogout,
   onRoleChange,
   onRevokeTelegramLink,
 }: UserDetailModalProps) {
+  const acting = actingKey !== null;
   return (
     <ModalShell
       title={detail?.user.email ?? "Detalle de usuario"}
@@ -678,26 +684,40 @@ function UserDetailModal({
             <div className="flex gap-2 flex-wrap">
               {(["member", "admin", "superadmin"] as AppRole[]).map((r) => {
                 const isCurrent = detail.user.role === r;
+                const isRoleActing = actingKey === "role";
+                const roleColor = {
+                  member: {
+                    active: "bg-neutral-800 border-neutral-800 text-white",
+                    inactive: "bg-white border-neutral-300 text-neutral-700 hover:border-neutral-500",
+                  },
+                  admin: {
+                    active: "bg-blue-600 border-blue-600 text-white",
+                    inactive: "bg-white border-blue-300 text-blue-800 hover:border-blue-500",
+                  },
+                  superadmin: {
+                    active: "bg-red-600 border-red-600 text-white",
+                    inactive: "bg-white border-red-300 text-red-800 hover:border-red-500",
+                  },
+                }[r];
                 return (
                   <button
                     key={r}
                     type="button"
-                    onClick={() => onRoleChange(r)}
+                    onClick={() => !isCurrent && onRoleChange(r)}
                     disabled={acting || isCurrent}
                     aria-pressed={isCurrent}
-                    className={`px-3 py-2 rounded-xl border text-sm font-medium transition inline-flex items-center gap-1.5 ${
-                      isCurrent
-                        ? "bg-neutral-900 text-white border-neutral-900 cursor-default"
-                        : "bg-white border-neutral-300 hover:border-neutral-500 disabled:opacity-50"
+                    className={`px-3 py-2 rounded-xl border text-sm font-medium transition inline-flex items-center gap-1.5 disabled:cursor-default ${
+                      isCurrent ? roleColor.active : `${roleColor.inactive} disabled:opacity-50`
                     }`}
                   >
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    {r}
-                    {isCurrent && (
-                      <span className="ml-1 text-[10px] uppercase tracking-widest opacity-80">
-                        actual
-                      </span>
+                    {isRoleActing && isCurrent ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : isCurrent ? (
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    ) : (
+                      <ShieldCheck className="w-3.5 h-3.5" />
                     )}
+                    {r}
                   </button>
                 );
               })}
