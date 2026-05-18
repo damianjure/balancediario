@@ -8,6 +8,7 @@ import { getDriveAuthUrl, exchangeCodeForTokens, uploadFileToDrive, encryptToken
 import { sendAppInvitationEmail, sendDashboardInvitationEmail } from "./email.ts";
 import { SYSTEM_PROMPT, parseGeminiJsonResponse } from "./gemini.ts";
 import { isMissingSchemaArtifactError } from "./errors.ts";
+import { ensurePersonalDashboard, seedDemoData, purgeDemoData } from "./demoSeed.ts";
 import {
   AppRole,
   parseBudgetRequest,
@@ -159,6 +160,7 @@ export function createApp({
   // Tradeoff: process restart re-syncs all users (acceptable — invitations sync is idempotent).
   // Declared inside createApp so tests get a fresh Set per app instance.
   const syncedUserKeys = new Set<string>();
+  const seededUserKeys = new Set<string>();
 
   const buildTelegramDeepLink = (token: string | null) =>
     token && telegramBotUsername
@@ -561,6 +563,25 @@ export function createApp({
         syncedUserKeys.add(syncKey);
       }
 
+      // Bootstrap personal dashboard + seed demo data for new member accounts (once per process)
+      if (session.role === "member" && !seededUserKeys.has(session.userId)) {
+        seededUserKeys.add(session.userId); // mark before async to prevent concurrent seeds
+        try {
+          const { data: userRow } = await supabase
+            .from("app_users")
+            .select("onboarding_state")
+            .eq("user_id", session.userId)
+            .single();
+          if (!userRow || userRow.onboarding_state === "pending") {
+            const dashboardId = await ensurePersonalDashboard(supabase, session);
+            await seedDemoData(supabase, session, dashboardId);
+          }
+        } catch (seedErr) {
+          console.error("Onboarding seed error:", seedErr);
+          seededUserKeys.delete(session.userId); // allow retry on next request
+        }
+      }
+
       req.session = session;
       next();
     } catch (err) {
@@ -601,7 +622,7 @@ export function createApp({
     const session = getSession(req);
     const { data } = await supabase
       .from("app_users")
-      .select("display_name, notification_hour")
+      .select("display_name, notification_hour, onboarding_state")
       .eq("user_id", session.userId)
       .single();
     res.json({
@@ -611,12 +632,13 @@ export function createApp({
       status: session.status,
       display_name: data?.display_name ?? null,
       notification_hour: data?.notification_hour ?? 21,
+      onboarding_state: data?.onboarding_state ?? "completed",
     });
   });
 
   app.patch("/api/me", requireSession, async (req, res) => {
     const session = getSession(req);
-    const body = req.body as { display_name?: string | null; notification_hour?: number };
+    const body = req.body as { display_name?: string | null; notification_hour?: number; onboarding_state?: string };
     const updates: Record<string, unknown> = {};
 
     if ("display_name" in body) {
@@ -629,6 +651,14 @@ export function createApp({
         return;
       }
       updates.notification_hour = h;
+    }
+    if ("onboarding_state" in body) {
+      const allowed = ["completed", "cleaned"];
+      if (!allowed.includes(body.onboarding_state as string)) {
+        res.status(400).json({ error: "invalid onboarding_state" });
+        return;
+      }
+      updates.onboarding_state = body.onboarding_state;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -671,6 +701,21 @@ export function createApp({
       empresas: emp.data ?? [],
       categorias: cat.data ?? [],
     });
+  });
+
+  app.delete("/api/me/demo-data", requireSession, async (req, res) => {
+    const session = getSession(req);
+    const scope = await resolveDataAccessScope(session);
+    if (!scope.dashboardId) {
+      return res.status(409).json({ error: "no_dashboard" });
+    }
+    try {
+      await purgeDemoData(supabase, session, scope.dashboardId);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("Demo purge error:", err);
+      res.status(500).json({ error: "failed_to_purge" });
+    }
   });
 
   app.get("/api/me/sessions", requireSession, async (req, res) => {
@@ -1689,12 +1734,25 @@ export function createApp({
         return res.status(403).json({ error: "forbidden" });
       }
 
+      // Reject if active (pending + not expired) invitation already exists for this email
+      const { data: existingRows } = await supabase
+        .from("user_invitations")
+        .select("id")
+        .eq("email", payload.email)
+        .eq("status", "pending")
+        .gt("expires_at", new Date().toISOString())
+        .limit(1) as { data: unknown[] | null };
+      if (existingRows && existingRows.length > 0) {
+        return res.status(409).json({ error: "invitation_active" });
+      }
+
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
       const invitationPayload = {
         email: payload.email,
         role: payload.role,
         status: "pending",
         invited_by: session.userId,
-        expires_at: null,
+        expires_at: expiresAt,
       };
 
       const { data, error } = await supabase
@@ -2159,6 +2217,22 @@ export function createApp({
       const inviteUrl = `${publicAppUrl || ""}/?invite=${data.invite_token}`;
       res.status(201).json({ ...data, invite_url: inviteUrl });
       void sendDashboardInvitationEmail(data.email, inviteUrl, data.role, session.email);
+
+      // Auto-purge demo data when owner invites their first collaborator
+      void (async () => {
+        try {
+          const { data: userRow } = await supabase
+            .from("app_users")
+            .select("onboarding_state")
+            .eq("user_id", session.userId)
+            .single();
+          if (userRow?.onboarding_state === "seeded") {
+            await purgeDemoData(supabase, session, scope.dashboardId!);
+          }
+        } catch (purgeErr) {
+          console.error("Auto-purge demo error:", purgeErr);
+        }
+      })();
     } catch (err) {
       console.error("Dashboard invitation error:", err);
       res.status(500).json({ error: "failed_to_save" });
