@@ -21,6 +21,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { api, ExtractedItem, Movimiento, Empresa, Categoria, AppViewer, Presupuesto, DashboardMembersResponse } from './services/api';
+import WelcomeWizard from './components/WelcomeWizard';
 import { getPendingCompanyAssignment } from './dashboard/companyAssignment';
 import {
   formatCurrency,
@@ -131,6 +132,9 @@ function readPersistedTab(): DashboardTab {
 export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme, themePreference, onSetThemePreference }: DashboardAppProps) {
   const initialBudgetPeriod = getCurrentPeriod();
   const [activeTab, setActiveTab] = useState<DashboardTab>(readPersistedTab);
+  const [showWizard, setShowWizard] = useState(
+    viewer.onboarding_state === 'pending' || viewer.onboarding_state === 'seeded'
+  );
 
   useEffect(() => {
     try {
@@ -1030,6 +1034,11 @@ export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme, 
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 font-sans p-4 md:p-8">
+      {showWizard && (
+        <WelcomeWizard
+          onFinish={() => setShowWizard(false)}
+        />
+      )}
       <div className="max-w-7xl mx-auto space-y-8">
         {apiStatus === 'missing_url' && (
           <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-center gap-3 text-amber-800 text-sm">

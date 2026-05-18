@@ -102,6 +102,11 @@ function createSupabaseStub(
         rows = rows.filter((row: any) => row[column] < value);
         return api;
       },
+      gt(column: string, value: string) {
+        callLog.push({ table, type: "gt", args: [column, value] });
+        rows = rows.filter((row: any) => row[column] != null && row[column] > value);
+        return api;
+      },
       eq(column: string, value: unknown) {
         callLog.push({ table, type: "eq", args: [column, value] });
         rows = rows.filter((row: any) => row[column] === value);
@@ -337,6 +342,7 @@ test("devuelve perfil para usuario autenticado activo", async () => {
         status: "active",
         display_name: null,
         notification_hour: 21,
+        onboarding_state: "completed",
       });
     },
   );

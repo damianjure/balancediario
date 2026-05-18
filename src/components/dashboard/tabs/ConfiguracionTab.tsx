@@ -28,6 +28,7 @@ import {
   type MemberPermissions,
   type TelegramLink,
   type UserSession,
+  type OnboardingState,
 } from "../../../services/api";
 import { ConfirmModal } from "../../ui/ConfirmModal";
 import { ThemeSelector, type ThemePreference } from "../../ThemeToggle";
@@ -117,6 +118,23 @@ export default function ConfiguracionTab({
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [sessionsLoaded, setSessionsLoaded] = useState(false);
   const [revokingSession, setRevokingSession] = useState<string | null>(null);
+
+  // demo data
+  const [onboardingState, setOnboardingState] = useState<OnboardingState>(viewer.onboarding_state ?? 'completed');
+  const [purgingDemo, setPurgingDemo] = useState(false);
+
+  const handlePurgeDemo = async () => {
+    setPurgingDemo(true);
+    try {
+      await api.deleteDemoData();
+      setOnboardingState('cleaned');
+      showNotice('Datos de ejemplo eliminados.');
+    } catch {
+      showNotice('No se pudo eliminar los datos de ejemplo.');
+    } finally {
+      setPurgingDemo(false);
+    }
+  };
 
   // delete account
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -788,6 +806,18 @@ export default function ConfiguracionTab({
             >
               <HardDrive className="w-4 h-4 text-neutral-500" />
               Desconectar Google Drive
+            </button>
+          )}
+
+          {/* Demo data purge */}
+          {(onboardingState === 'seeded' || onboardingState === 'pending') && (
+            <button
+              onClick={() => void handlePurgeDemo()}
+              disabled={purgingDemo}
+              className="w-full flex items-center gap-3 rounded-2xl border border-amber-200 px-4 py-3 text-sm font-medium text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50"
+            >
+              {purgingDemo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              Limpiar datos de ejemplo
             </button>
           )}
 

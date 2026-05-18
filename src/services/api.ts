@@ -128,6 +128,8 @@ export interface AppInvitation {
   accepted_at: string | null;
 }
 
+export type OnboardingState = 'pending' | 'seeded' | 'completed' | 'cleaned';
+
 export interface AppViewer {
   id: string;
   email: string;
@@ -135,6 +137,7 @@ export interface AppViewer {
   status: AppUserStatus;
   display_name?: string | null;
   notification_hour?: number | null;
+  onboarding_state?: OnboardingState;
 }
 
 export interface UserSession {
@@ -532,8 +535,12 @@ export const api = {
     return fetchApi("/api/dashboard/leave", { method: "POST" });
   },
 
-  async updateMe(fields: { display_name?: string | null; notification_hour?: number }): Promise<void> {
+  async updateMe(fields: { display_name?: string | null; notification_hour?: number; onboarding_state?: OnboardingState }): Promise<void> {
     return fetchApi("/api/me", { method: "PATCH", body: JSON.stringify(fields) });
+  },
+
+  async deleteDemoData(): Promise<void> {
+    return fetchApi("/api/me/demo-data", { method: "DELETE" });
   },
 
   async getMySessionsList(): Promise<{ sessions: UserSession[]; currentSessionId: string | null }> {
