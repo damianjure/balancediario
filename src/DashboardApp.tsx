@@ -736,7 +736,7 @@ export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme, 
       <div className="relative group">
         <textarea
           id="message-input"
-          className="w-full min-h-[140px] p-6 bg-white border border-neutral-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none transition-all resize-none text-lg"
+          className="w-full min-h-[140px] p-6 bg-white border border-neutral-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-neutral-900 focus:border-transparent outline-none transition-[border-color,box-shadow] duration-150 resize-none text-lg"
           placeholder="Ej: 'Che, cobré 5 lucas por el laburito del taller' o 'Agregar empresa Casa'"
           value={inputText}
           onChange={(event) => setInputText(event.target.value)}
@@ -748,7 +748,7 @@ export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme, 
             id="process-button"
             onClick={handleProcess}
             disabled={!inputText.trim() || isProcessing}
-            className="flex items-center gap-2 bg-neutral-900 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-neutral-200"
+            className="flex items-center gap-2 bg-neutral-900 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-neutral-800 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 shadow-lg shadow-neutral-200"
           >
             {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             {isProcessing ? 'Procesando...' : 'Enviar'}
@@ -780,14 +780,15 @@ export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme, 
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <AnimatePresence mode="popLayout">
-            {filteredHistory.map((item) => (
+            {filteredHistory.map((item, index) => (
               <motion.div
                 key={item.id}
                 layout
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="group bg-white border border-neutral-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden"
+                exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.12 } }}
+                transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1], delay: Math.min(index * 0.04, 0.16) }}
+                className="group bg-white border border-neutral-200 hover:border-neutral-300 rounded-2xl p-5 shadow-sm relative overflow-hidden transition-[border-color] duration-150"
               >
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-2">
@@ -807,7 +808,7 @@ export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme, 
                     {canWriteData && (
                       <button
                         onClick={() => openMovementEditor(item)}
-                        className="p-2 text-neutral-400 hover:text-neutral-900 transition-colors rounded-lg hover:bg-neutral-50"
+                        className="p-2 text-neutral-400 hover:text-neutral-900 active:scale-[0.9] transition duration-100 rounded-lg hover:bg-neutral-50"
                         title="Editar"
                       >
                         <Pencil className="w-4 h-4" />
@@ -815,7 +816,7 @@ export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme, 
                     )}
                     <button
                       onClick={() => copyJson(item)}
-                      className="p-2 text-neutral-400 hover:text-neutral-900 transition-colors rounded-lg hover:bg-neutral-50"
+                      className="p-2 text-neutral-400 hover:text-neutral-900 active:scale-[0.9] transition duration-100 rounded-lg hover:bg-neutral-50"
                       title="Copiar JSON"
                     >
                       {copiedId === item.id ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
@@ -823,7 +824,7 @@ export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme, 
                     {canWriteData && (
                       <button
                         onClick={() => deleteItem(item.id)}
-                        className="p-2 text-neutral-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+                        className="p-2 text-neutral-400 hover:text-red-600 active:scale-[0.9] transition duration-100 rounded-lg hover:bg-red-50"
                         title="Borrar"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1111,7 +1112,7 @@ export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme, 
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold whitespace-nowrap transition-all border ${isActive ? 'bg-neutral-900 text-white border-neutral-900 shadow' : 'bg-white text-neutral-700 border-transparent hover:border-neutral-200 hover:bg-neutral-50'}`}
+                    className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold whitespace-nowrap transition duration-150 active:scale-[0.96] border ${isActive ? 'bg-neutral-900 text-white border-neutral-900 shadow' : 'bg-white text-neutral-700 border-transparent hover:border-neutral-200 hover:bg-neutral-50'}`}
                   >
                     <Icon className="w-4 h-4 shrink-0" />
                     {tab.label}
@@ -1130,7 +1131,7 @@ export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme, 
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`rounded-2xl px-4 py-4 text-left transition-all border ${isActive ? 'bg-neutral-900 text-white border-neutral-900 shadow-lg' : 'bg-white text-neutral-700 border-transparent hover:border-neutral-200 hover:bg-neutral-50'}`}
+                    className={`rounded-2xl px-4 py-4 text-left transition duration-150 active:scale-[0.97] border ${isActive ? 'bg-neutral-900 text-white border-neutral-900 shadow-lg' : 'bg-white text-neutral-700 border-transparent hover:border-neutral-200 hover:bg-neutral-50'}`}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <Icon className="w-4 h-4" />
@@ -1151,7 +1152,7 @@ export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme, 
               initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -8 }}
-              transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: 'easeOut' }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: [0.23, 1, 0.32, 1] }}
             >
               <Suspense fallback={<SectionLoadingState message={`Cargando ${activeTabMeta.label.toLowerCase()}...`} />}>
                 {renderActiveTab()}
@@ -1322,6 +1323,7 @@ export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme, 
           </ModalShell>
         )}
 
+        <AnimatePresence>
         {confirmationModal && (
           <ModalShell
             title={confirmationModal.title}
@@ -1357,7 +1359,7 @@ export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme, 
                   setConfirmationModal(null);
                   setConfirmationInput('');
                 }}
-                className="rounded-2xl border border-neutral-200 px-4 py-3 text-neutral-700"
+                className="rounded-2xl border border-neutral-200 px-4 py-3 text-neutral-700 hover:bg-neutral-50 active:scale-[0.97] transition duration-150"
                 disabled={isConfirmingAction}
               >
                 Cancelar
@@ -1365,7 +1367,7 @@ export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme, 
               <button
                 onClick={() => void runConfirmation()}
                 disabled={isConfirmingAction}
-                className={`rounded-2xl px-5 py-3 font-medium text-white ${
+                className={`rounded-2xl px-5 py-3 font-medium text-white active:scale-[0.97] transition duration-150 ${
                   confirmationModal.tone === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-neutral-900 hover:bg-neutral-800'
                 } disabled:opacity-60`}
               >
@@ -1374,6 +1376,7 @@ export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme, 
             </div>
           </ModalShell>
         )}
+        </AnimatePresence>
 
         <footer className="pt-12 pb-8 border-t border-neutral-100 text-center">
           <p className="text-xs text-neutral-400">Desarrollado para el mercado Argentino. Las conversiones de jerga son aproximadas y se basan en el uso común.</p>

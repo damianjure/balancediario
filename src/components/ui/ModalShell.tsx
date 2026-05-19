@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { motion } from "motion/react";
 import { X } from "lucide-react";
 
 interface ModalShellProps {
@@ -90,11 +91,17 @@ export function ModalShell({
   }, []);
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15 }}
       className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
       onClick={closeOnBackdrop ? onClose : undefined}
     >
-      <div
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
@@ -118,13 +125,13 @@ export function ModalShell({
             type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            className="p-2 rounded-xl border border-neutral-300 hover:bg-neutral-50 text-neutral-700"
+            className="p-2 rounded-xl border border-neutral-300 hover:bg-neutral-50 active:scale-[0.92] transition-transform duration-100 text-neutral-700"
           >
             <X className="w-4 h-4" />
           </button>
         </header>
         <div className="overflow-y-auto px-6 py-5">{children}</div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

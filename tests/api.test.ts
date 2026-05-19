@@ -95,7 +95,9 @@ function createSupabaseStub(
       limit(limit: number) {
         callLog.push({ table, type: "limit", args: [limit] });
         rows = rows.slice(0, limit);
-        return Promise.resolve({ data: rows, error: null });
+        const promise: any = Promise.resolve({ data: rows, error: null });
+        promise.single = () => Promise.resolve({ data: rows[0], error: null });
+        return promise;
       },
       lt(column: string, value: string) {
         callLog.push({ table, type: "lt", args: [column, value] });
@@ -965,8 +967,8 @@ test("lista miembros e invitaciones del dashboard compartido", async () => {
       },
     ],
     dashboardMembers: [
-      { id: "dm-1", user_id: "owner-1", dashboard_id: "dashboard-1", role: "owner", status: "active", created_at: "2026-04-30T00:00:00.000Z" },
-      { id: "dm-2", user_id: "editor-1", dashboard_id: "dashboard-1", role: "editor", status: "active", created_at: "2026-04-30T00:00:00.000Z" },
+      { id: "dm-1", user_id: "owner-1", dashboard_id: "dashboard-1", role: "owner", status: "active", created_at: "2026-04-30T00:00:00.000Z", app_users: { email: "owner@example.com" } },
+      { id: "dm-2", user_id: "editor-1", dashboard_id: "dashboard-1", role: "editor", status: "active", created_at: "2026-04-30T00:00:00.000Z", app_users: { email: "editor@example.com" } },
     ],
     dashboardInvitations: [
       { id: "di-1", dashboard_id: "dashboard-1", email: "viewer@example.com", role: "viewer", status: "pending", invite_token: "dash-token-1", expires_at: null, created_at: "2026-04-30T00:00:00.000Z", accepted_at: null },

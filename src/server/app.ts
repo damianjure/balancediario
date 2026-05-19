@@ -156,12 +156,6 @@ export function createApp({
 }: AppDeps) {
   const app = express();
 
-  // WARNING-7: track which users were already synced in this process lifetime.
-  // Tradeoff: process restart re-syncs all users (acceptable — invitations sync is idempotent).
-  // Declared inside createApp so tests get a fresh Set per app instance.
-  const syncedUserKeys = new Set<string>();
-  const seededUserKeys = new Set<string>();
-
   const buildTelegramDeepLink = (token: string | null) =>
     token && telegramBotUsername
       ? `https://t.me/${telegramBotUsername}?start=${token}`
@@ -479,7 +473,7 @@ export function createApp({
   const listDashboardMembers = async (dashboardId: string): Promise<DashboardMemberSummary[]> => {
     const { data, error } = await supabase
       .from("dashboard_members")
-      .select("id, user_id, role, status, created_at, permissions")
+      .select("id, user_id, role, status, created_at, permissions, app_users(email)")
       .eq("dashboard_id", dashboardId)
       .order("created_at", { ascending: true })
       .limit(100);
@@ -488,24 +482,10 @@ export function createApp({
     const members = data ?? [];
     if (members.length === 0) return [];
 
-    // WARNING-12: batch fetch all users in a single query instead of N+1
-    const userIds = members.map((m: any) => m.user_id);
-    const { data: userRows, error: userError } = await supabase
-      .from("app_users")
-      .select("user_id, email")
-      .in("user_id", userIds)
-      .limit(userIds.length);
-    if (userError) throw userError;
-
-    const userById = new Map<string, { email: string | null }>();
-    for (const u of userRows ?? []) {
-      userById.set(u.user_id, { email: u.email ?? null });
-    }
-
     return members.map((member: any) => ({
       id: member.id,
       user_id: member.user_id,
-      email: userById.get(member.user_id)?.email ?? null,
+      email: member.app_users?.email ?? null,
       role: member.role,
       status: member.status,
       created_at: member.created_at,
@@ -556,32 +536,6 @@ export function createApp({
         return res.status(423).json({ error: "user_paused" });
       }
 
-      // WARNING-7: skip sync if already done for this user in this process lifetime
-      const syncKey = `${session.userId}:${session.email}`;
-      if (!syncedUserKeys.has(syncKey)) {
-        await syncPendingDashboardInvitations(session);
-        syncedUserKeys.add(syncKey);
-      }
-
-      // Bootstrap personal dashboard + seed demo data for new member accounts (once per process)
-      if (session.role === "member" && !seededUserKeys.has(session.userId)) {
-        seededUserKeys.add(session.userId); // mark before async to prevent concurrent seeds
-        try {
-          const { data: userRow } = await supabase
-            .from("app_users")
-            .select("onboarding_state")
-            .eq("user_id", session.userId)
-            .single();
-          if (!userRow || userRow.onboarding_state === "pending") {
-            const dashboardId = await ensurePersonalDashboard(supabase, session);
-            await seedDemoData(supabase, session, dashboardId);
-          }
-        } catch (seedErr) {
-          console.error("Onboarding seed error:", seedErr);
-          seededUserKeys.delete(session.userId); // allow retry on next request
-        }
-      }
-
       req.session = session;
       next();
     } catch (err) {
@@ -620,11 +574,35 @@ export function createApp({
 
   app.get("/api/me", requireSession, async (req, res) => {
     const session = getSession(req);
+
+    // Relocated side effects: sync invitations and seed demo data for new member accounts
+    await syncPendingDashboardInvitations(session);
+
+    let currentOnboardingState: string | undefined;
+
+    if (session.role === "member") {
+      const { data: userRow } = await supabase
+        .from("app_users")
+        .select("onboarding_state")
+        .eq("user_id", session.userId)
+        .single();
+      if (!userRow || userRow.onboarding_state === "pending") {
+        try {
+          const dashboardId = await ensurePersonalDashboard(supabase, session);
+          await seedDemoData(supabase, session, dashboardId);
+          currentOnboardingState = "seeded";
+        } catch (seedErr) {
+          console.error("Onboarding seed error:", seedErr);
+        }
+      }
+    }
+
     const { data } = await supabase
       .from("app_users")
       .select("display_name, notification_hour, onboarding_state")
       .eq("user_id", session.userId)
       .single();
+
     res.json({
       id: session.userId,
       email: session.email,
@@ -632,7 +610,7 @@ export function createApp({
       status: session.status,
       display_name: data?.display_name ?? null,
       notification_hour: data?.notification_hour ?? 21,
-      onboarding_state: data?.onboarding_state ?? "completed",
+      onboarding_state: currentOnboardingState ?? data?.onboarding_state ?? "completed",
     });
   });
 

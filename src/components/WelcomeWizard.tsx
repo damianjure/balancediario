@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'motion/react';
 import { Sparkles, BarChart2, Trash2, ChevronRight, MessageCircle, X } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -40,13 +41,23 @@ export default function WelcomeWizard({ onFinish }: WelcomeWizardProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-md relative">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+        className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-md relative"
+      >
 
         {/* Skip button */}
         <button
           onClick={() => finish(false)}
-          className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 transition-colors"
+          className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 active:scale-[0.9] transition-transform duration-100"
           aria-label="Saltear bienvenida"
         >
           <X className="w-5 h-5" />
@@ -68,7 +79,7 @@ export default function WelcomeWizard({ onFinish }: WelcomeWizardProps) {
             </div>
             <button
               onClick={() => setStep('tour')}
-              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-xl transition-colors"
+              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.97] text-white font-medium py-3 px-6 rounded-xl transition duration-150"
             >
               Ver el tour <ChevronRight className="w-4 h-4" />
             </button>
@@ -100,7 +111,7 @@ export default function WelcomeWizard({ onFinish }: WelcomeWizardProps) {
             <div className="flex gap-3">
               <button
                 onClick={() => { void loadTelegramLink(); setStep('telegram'); }}
-                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-xl transition-colors text-sm"
+                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.97] text-white font-medium py-3 px-4 rounded-xl transition duration-150 text-sm"
               >
                 Siguiente <ChevronRight className="w-4 h-4" />
               </button>
@@ -132,7 +143,7 @@ export default function WelcomeWizard({ onFinish }: WelcomeWizardProps) {
                 href={deepLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-600 text-white font-medium py-3 px-6 rounded-xl transition-colors text-sm"
+                className="w-full flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-600 active:scale-[0.97] text-white font-medium py-3 px-6 rounded-xl transition duration-150 text-sm"
               >
                 <MessageCircle className="w-4 h-4" />
                 Abrir bot en Telegram
@@ -143,14 +154,14 @@ export default function WelcomeWizard({ onFinish }: WelcomeWizardProps) {
               <button
                 onClick={() => finish(false)}
                 disabled={finishing}
-                className="flex-1 py-3 px-4 rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors text-sm font-medium disabled:opacity-50"
+                className="flex-1 py-3 px-4 rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-50 active:scale-[0.97] transition duration-150 text-sm font-medium disabled:opacity-50"
               >
                 Saltear por ahora
               </button>
               <button
                 onClick={() => finish(false)}
                 disabled={finishing}
-                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-xl transition-colors text-sm disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.97] text-white font-medium py-3 px-4 rounded-xl transition duration-150 text-sm disabled:opacity-50"
               >
                 {finishing ? 'Cargando...' : 'Ir al dashboard'}
               </button>
@@ -158,7 +169,7 @@ export default function WelcomeWizard({ onFinish }: WelcomeWizardProps) {
           </div>
         )}
 
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

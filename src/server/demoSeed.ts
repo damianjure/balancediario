@@ -1,5 +1,9 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AppSession } from "./app.ts";
+
+/** Minimal Supabase interface — only what demoSeed needs. Compatible with SupabaseLike in tests. */
+interface SeedSupabase {
+  from(table: string): any;
+}
 
 const DEMO_EMPRESA = "Empresa Demo SA";
 
@@ -33,7 +37,7 @@ function daysAgoDate(n: number): string {
 /** Bootstrap personal dashboard + owner membership for a brand-new user.
  *  Returns the dashboardId (new or pre-existing). */
 export async function ensurePersonalDashboard(
-  supabase: SupabaseClient,
+  supabase: SeedSupabase,
   session: AppSession,
 ): Promise<string> {
   // Check if dashboard already exists
@@ -75,7 +79,7 @@ export async function ensurePersonalDashboard(
 
 /** Seed demo empresa + movimientos for a new owner. */
 export async function seedDemoData(
-  supabase: SupabaseClient,
+  supabase: SeedSupabase,
   session: AppSession,
   dashboardId: string,
 ): Promise<void> {
@@ -119,7 +123,7 @@ export async function seedDemoData(
 
 /** Bulk-delete all is_demo rows owned by this user/dashboard. */
 export async function purgeDemoData(
-  supabase: SupabaseClient,
+  supabase: SeedSupabase,
   session: AppSession,
   dashboardId: string,
 ): Promise<void> {

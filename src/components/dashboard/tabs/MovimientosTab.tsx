@@ -62,7 +62,7 @@ export default function MovimientosTab({
                   <div key={company} className="relative group">
                     <button
                       onClick={() => setSelectedCompany(company)}
-                      className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${selectedCompany === company ? 'bg-neutral-900 text-white shadow-md' : 'bg-white border border-neutral-200 text-neutral-500 hover:border-neutral-400'}`}
+                      className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition duration-150 active:scale-[0.95] ${selectedCompany === company ? 'bg-neutral-900 text-white shadow-md' : 'bg-white border border-neutral-200 text-neutral-500 hover:border-neutral-400'}`}
                     >
                       {company === 'all' ? 'Todas las empresas' : company}
                     </button>
@@ -91,7 +91,7 @@ export default function MovimientosTab({
               <button
                 key={filter.id}
                 onClick={() => setMovementType(filter.id as 'all' | 'ingreso' | 'egreso')}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`rounded-full px-3 py-1.5 text-xs font-medium transition duration-150 active:scale-[0.95] ${
                   movementType === filter.id
                     ? 'bg-neutral-900 text-white'
                     : 'border border-neutral-200 bg-white text-neutral-500 hover:border-neutral-400'
@@ -108,7 +108,7 @@ export default function MovimientosTab({
               <button
                 key={filter.id}
                 onClick={() => setMovementCurrency(filter.id as 'all' | 'ARS' | 'USD')}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`rounded-full px-3 py-1.5 text-xs font-medium transition duration-150 active:scale-[0.95] ${
                   movementCurrency === filter.id
                     ? 'bg-neutral-900 text-white'
                     : 'border border-neutral-200 bg-white text-neutral-500 hover:border-neutral-400'
