@@ -10,6 +10,12 @@
   --duration-quick: 180ms;
   --duration-base: 260ms;
   --duration-slow: 420ms;
+  --space-tight: 0.5rem;
+  --space-snug: 0.75rem;
+  --space-comfort: 1rem;
+  --space-relaxed: 1.5rem;
+  --space-section: 2rem;
+  --space-hero: 3rem;
 }
 
 @layer base {
@@ -247,6 +253,20 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Semantic stack rhythm — vary vertical gap to break monotony.
+     Use when sibling blocks have meaningfully different conceptual weight. */
+  .stack-tight > * + * { margin-top: var(--space-tight); }
+  .stack-snug > * + * { margin-top: var(--space-snug); }
+  .stack-comfort > * + * { margin-top: var(--space-comfort); }
+  .stack-relaxed > * + * { margin-top: var(--space-relaxed); }
+  .stack-section > * + * { margin-top: var(--space-section); }
+  .stack-hero > * + * { margin-top: var(--space-hero); }
+
+  /* Row densities for list items inside cards. Apply to <li>, <button>, <div>. */
+  .row-compact { padding: 0.625rem 0.875rem; }   /* 10/14 */
+  .row-comfort { padding: 0.875rem 1rem; }       /* 14/16 */
+  .row-airy { padding: 1.125rem 1.25rem; }       /* 18/20 */
 }
 
 @media (prefers-reduced-motion: reduce) {

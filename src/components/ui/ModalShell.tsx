@@ -95,7 +95,8 @@ export function ModalShell({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.15 }}
-      className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-[2px]"
+      style={{ backgroundColor: "color-mix(in srgb, var(--app-text-1) 42%, transparent)" }}
       onClick={closeOnBackdrop ? onClose : undefined}
     >
       <motion.div
@@ -125,7 +126,7 @@ export function ModalShell({
             type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            className="p-2 rounded-xl border border-neutral-300 hover:bg-neutral-50 active:scale-[0.92] transition-transform duration-100 text-neutral-700"
+            className="inline-flex items-center justify-center h-11 w-11 rounded-xl border border-neutral-300 hover:bg-neutral-50 active:scale-[0.94] transition-transform text-neutral-700 shrink-0"
           >
             <X className="w-4 h-4" />
           </button>

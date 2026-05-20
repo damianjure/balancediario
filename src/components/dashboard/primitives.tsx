@@ -9,30 +9,32 @@ export function MetricCard({ label, value, tone = 'neutral' }: { label: string; 
   }[tone];
 
   return (
-    <div className="bg-white p-5 rounded-2xl border border-neutral-100 shadow-sm">
-      <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest block mb-1">{label}</span>
-      <div className={`text-2xl font-bold ${toneClass}`}>{value}</div>
+    <div className="bg-white px-5 py-4 rounded-2xl border border-neutral-100 shadow-sm">
+      <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest block mb-2">{label}</span>
+      <div className={`text-2xl font-bold tracking-tight tabular-nums ${toneClass}`}>{value}</div>
     </div>
   );
 }
 
 export function SectionCard({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
-    <section className="bg-white border border-neutral-200 rounded-2xl p-6 md:p-8 shadow-sm space-y-5">
-      <div>
-        <h2 className="text-xl font-bold text-neutral-900">{title}</h2>
-        {description && <p className="text-sm text-neutral-500 mt-1">{description}</p>}
-      </div>
-      {children}
+    <section className="bg-white border border-neutral-200 rounded-2xl px-6 py-7 md:px-8 md:py-9 shadow-sm">
+      <header className="mb-6">
+        <h2 className="text-xl font-bold text-neutral-900 tracking-tight">{title}</h2>
+        {description && (
+          <p className="text-sm text-neutral-500 mt-1.5 leading-relaxed max-w-prose">{description}</p>
+        )}
+      </header>
+      <div className="space-y-5">{children}</div>
     </section>
   );
 }
 
 export function PlaceholderPanel({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-4 text-sm text-neutral-600">
+    <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 px-5 py-4 text-sm text-neutral-600">
       <div className="font-semibold text-neutral-900 mb-1">{title}</div>
-      <p>{body}</p>
+      <p className="leading-relaxed">{body}</p>
     </div>
   );
 }
