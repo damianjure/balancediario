@@ -52,7 +52,7 @@ export async function ensurePersonalDashboard(
   if (existing?.dashboard_id) return existing.dashboard_id;
 
   const dashboardName =
-    session.email.split("@")[0].replace(/[^a-z0-9]/gi, " ").trim() || "Mi Dashboard";
+    session.email.split("@")[0].replace(/[^a-z0-9]/gi, " ").trim().slice(0, 60) || "Mi Dashboard";
 
   const { data: dashboard, error: dashErr } = await supabase
     .from("dashboards")
@@ -121,26 +121,30 @@ export async function seedDemoData(
   void empresa;
 }
 
-/** Bulk-delete all is_demo rows owned by this user/dashboard. */
+/** Bulk-delete all is_demo rows owned by this user/dashboard.
+ *  Errors are logged but not thrown — partial cleanup is acceptable for demo data. */
 export async function purgeDemoData(
   supabase: SeedSupabase,
   session: AppSession,
   dashboardId: string,
 ): Promise<void> {
-  await supabase
+  const { error: movErr } = await supabase
     .from("movimientos")
     .delete()
     .eq("dashboard_id", dashboardId)
     .eq("is_demo", true);
+  if (movErr) console.error("[purgeDemoData] failed to delete demo movimientos", { dashboardId, err: movErr });
 
-  await supabase
+  const { error: empErr } = await supabase
     .from("empresas")
     .delete()
     .eq("dashboard_id", dashboardId)
     .eq("is_demo", true);
+  if (empErr) console.error("[purgeDemoData] failed to delete demo empresas", { dashboardId, err: empErr });
 
-  await supabase
+  const { error: stateErr } = await supabase
     .from("app_users")
     .update({ onboarding_state: "cleaned" })
     .eq("user_id", session.userId);
+  if (stateErr) console.error("[purgeDemoData] failed to update onboarding_state", { userId: session.userId, err: stateErr });
 }

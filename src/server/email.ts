@@ -153,6 +153,11 @@ function dashboardInvitationHtml(inviteUrl: string, role: string, inviterEmail: 
   return baseTemplate("Te invitaron a un dashboard en Caja Chica", body);
 }
 
+function sanitizeHeader(value: string): string {
+  // Strip CR/LF to prevent header injection if upstream value ever contains them.
+  return value.replace(/[\r\n]+/g, " ").trim();
+}
+
 async function sendViaBrevo(to: string, subject: string, htmlContent: string): Promise<void> {
   const apiKey = getApiKey();
   if (!apiKey) {
@@ -161,11 +166,14 @@ async function sendViaBrevo(to: string, subject: string, htmlContent: string): P
   }
 
   const payload = {
-    sender: { name: FROM_NAME, email: FROM_EMAIL },
-    to: [{ email: to }],
-    subject,
+    sender: { name: sanitizeHeader(FROM_NAME), email: sanitizeHeader(FROM_EMAIL) },
+    to: [{ email: sanitizeHeader(to) }],
+    subject: sanitizeHeader(subject),
     htmlContent,
   };
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
 
   try {
     const res = await fetch(BREVO_ENDPOINT, {
@@ -176,6 +184,7 @@ async function sendViaBrevo(to: string, subject: string, htmlContent: string): P
         accept: "application/json",
       },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
 
     if (!res.ok) {
@@ -187,6 +196,8 @@ async function sendViaBrevo(to: string, subject: string, htmlContent: string): P
     console.log("[email] Sent to", to, "subject:", subject);
   } catch (err) {
     console.error("[email] Brevo request error", { to, err });
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
