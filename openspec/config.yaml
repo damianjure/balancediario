@@ -1,0 +1,30 @@
+schema: spec-driven
+
+context: |
+  Tech stack: React 19, Vite 6, TypeScript, Tailwind CSS v4, Express, grammY, Supabase, Google Drive APIs.
+  Architecture: Monorepo with web frontend, HTTP backend, and Telegram bot. Clean/Hexagonal principles.
+  Testing: Node native test runner (`node --import tsx --test`).
+  Style: camelCase variables, PascalCase types, UPPER_SNAKE_CASE constants, kebab-case files. Immutability preferred.
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    - Follow existing code patterns
+    tdd: true
+    test_command: "npm test"
+  verify:
+    test_command: "npm test"
+    build_command: "npm run build"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas
