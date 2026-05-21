@@ -603,16 +603,10 @@ export function createApp({
         .single();
       if (!userRow || userRow.onboarding_state === "pending") {
         if (isDashboardJoiner) {
-          // Joiners skip demo seed — mark completed directly
-          try {
-            await supabase
-              .from("app_users")
-              .update({ onboarding_state: "completed" })
-              .eq("user_id", session.userId);
-            currentOnboardingState = "completed";
-          } catch (err) {
-            console.error("Joiner onboarding_state update error:", err);
-          }
+          // Joiners skip demo seed but keep onboarding_state='pending' so the
+          // frontend renders <WelcomeJoined>. When the user dismisses it, the
+          // wizard PATCHes /api/me with onboarding_state='completed'.
+          currentOnboardingState = "pending";
         } else {
           try {
             const dashboardId = await ensurePersonalDashboard(supabase, session);
