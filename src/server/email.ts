@@ -210,6 +210,49 @@ function baseTemplate(title: string, preheader: string, body: string): string {
       margin: 28px 0 4px;
     }
     .signoff strong { font-weight: 600; }
+    .from {
+      font-size: 13px;
+      color: oklch(48% 0.01 95);
+      margin: 0 0 24px;
+    }
+    .from strong { color: oklch(22% 0.01 95); font-weight: 600; }
+    .from-footer {
+      font-size: 12.5px;
+      color: oklch(58% 0.01 95);
+      margin: 24px 0 0;
+      font-style: italic;
+    }
+    h1.title {
+      margin: 0 0 20px;
+      font-size: 24px;
+      line-height: 1.25;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      color: oklch(18% 0.01 95);
+    }
+    .fine {
+      font-size: 13.5px;
+      color: oklch(48% 0.01 95);
+      line-height: 1.6;
+      margin: 0 0 20px;
+      max-width: 56ch;
+    }
+    .aside {
+      font-size: 14px;
+      color: oklch(42% 0.01 95);
+      line-height: 1.55;
+      margin: 24px 0 16px;
+      padding: 12px 14px;
+      background: oklch(96% 0.005 95);
+      border-radius: 8px;
+      max-width: 56ch;
+    }
+    .link {
+      color: oklch(38% 0.1 148);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .link:hover { text-decoration: underline; }
     .padbottom { padding-bottom: 32px; }
     .footer {
       padding: 20px 36px 0;
@@ -226,7 +269,7 @@ function baseTemplate(title: string, preheader: string, body: string): string {
       .brandbar { padding: 22px 22px 0; }
       .content { padding: 24px 22px 4px; }
       .footer { padding: 16px 22px 0; }
-      h2.title { font-size: 22px; }
+      h1.title, h2.title { font-size: 22px; }
       p.lede { font-size: 15px; }
       .cta a { display: block; text-align: center; }
     }
@@ -234,7 +277,7 @@ function baseTemplate(title: string, preheader: string, body: string): string {
       body { background: oklch(16% 0.008 95); color: oklch(92% 0.005 95); }
       .card { background: oklch(20% 0.008 95); border-color: oklch(26% 0.008 95); }
       .wordmark { color: oklch(94% 0.005 95); }
-      h2.title { color: oklch(96% 0.005 95); }
+      h1.title, h2.title { color: oklch(96% 0.005 95); }
       p.lede, p.body { color: oklch(78% 0.005 95); }
       .cta a { background: oklch(94% 0.005 95); color: oklch(18% 0.01 95); }
       .cta .hint { color: oklch(62% 0.01 95); }
@@ -245,6 +288,12 @@ function baseTemplate(title: string, preheader: string, body: string): string {
       .rule { border-top-color: oklch(28% 0.008 95); }
       .footer p { color: oklch(58% 0.01 95); }
       .badge { background: oklch(30% 0.06 148); color: oklch(88% 0.08 148); }
+      .from { color: oklch(60% 0.01 95); }
+      .from strong { color: oklch(94% 0.005 95); }
+      .from-footer { color: oklch(60% 0.01 95); }
+      .fine { color: oklch(60% 0.01 95); }
+      .aside { background: oklch(24% 0.008 95); color: oklch(72% 0.01 95); }
+      .link { color: oklch(75% 0.12 148); }
     }
   </style>
 </head>
@@ -270,57 +319,25 @@ function baseTemplate(title: string, preheader: string, body: string): string {
 
 export function appInvitationHtml(inviteUrl: string): string {
   const safeUrl = escapeHtml(inviteUrl);
+  // Single-CTA welcome email (research-driven, 2026-05-21 redesign).
+  // No feature dump, no nested step boxes — one activation action only.
   const body = `
-    <p class="eyebrow">Tu invitación</p>
-    <h2 class="title">Bienvenida a Caja Chica</h2>
-    <p class="lede">Registrá gastos e ingresos escribiendo como hablás. Sin formularios, sin planillas. La app entiende el contexto y te muestra el resumen al instante.</p>
+    <p class="from"><strong>Damián</strong> · Caja Chica</p>
+    <h1 class="title">Te invité a Caja Chica.</h1>
+    <p class="lede">Es una app para registrar gastos e ingresos escribiendo como hablás. Tipo: <em>"pagué 4500 de luz"</em>.</p>
 
     <div class="cta">
-      <a href="${safeUrl}">Activar mi cuenta</a>
-      <span class="hint">El enlace abre la app y completa el alta automáticamente.</span>
+      <a href="${safeUrl}">Entrar con Google</a>
     </div>
 
-    <div class="note">
-      Importante: ingresá con la cuenta de Google asociada a este mail. Otra cuenta no va a poder acceder.
-    </div>
+    <p class="fine">Usá la cuenta de Google asociada a este mail. Otra cuenta no va a poder acceder.</p>
 
-    <div class="section">
-      <h3>Primeros pasos</h3>
-      <ol class="steps">
-        <li>Tocá el botón de arriba para activar tu cuenta.</li>
-        <li>Elegí <strong>Entrar con Google</strong> y seleccioná esta dirección.</li>
-        <li>Ya estás dentro. Probá escribir <em>"pagué 4500 de luz"</em> y mirá cómo lo registra.</li>
-      </ol>
-    </div>
-
-    <hr class="rule" />
-
-    <div class="section">
-      <h3>Sumá Telegram (opcional)</h3>
-      <ol class="steps">
-        <li>El administrador del dashboard te genera un enlace desde <strong>Colaboración &rsaquo; Vincular Telegram</strong>.</li>
-        <li>Abrí ese enlace en la app de Telegram.</li>
-        <li>Cuando se confirme, usá <strong>/menu</strong> para registrar movimientos por chat.</li>
-      </ol>
-    </div>
-
-    <hr class="rule" />
-
-    <div class="section">
-      <h3>Invitar gente a tu dashboard</h3>
-      <ol class="steps">
-        <li>Andá a <strong>Configuración &rsaquo; Colaboración</strong>.</li>
-        <li>Ingresá el mail y elegí rol: <strong>Editor</strong> (carga y ve) o <strong>Viewer</strong> (solo ve).</li>
-        <li>Compartí el enlace que genera el sistema.</li>
-      </ol>
-    </div>
-
-    <p class="signoff">Si algo no anda, respondé este mail. Leo todas las respuestas.</p>
-    <p class="signoff"><strong>Damián</strong>, creador de Caja Chica.</p>
+    <p class="signoff">Cualquier cosa, respondé este mail. Lo leo yo.</p>
+    <p class="signoff"><strong>Damián</strong></p>
   `;
   return baseTemplate(
-    "Bienvenida a Caja Chica",
-    "Activá tu cuenta y empezá a registrar movimientos en lenguaje natural.",
+    "Te invité a Caja Chica",
+    "Entrá con Google y empezá a registrar movimientos escribiendo como hablás.",
     body,
   );
 }
@@ -328,63 +345,38 @@ export function appInvitationHtml(inviteUrl: string): string {
 export function dashboardInvitationHtml(inviteUrl: string, role: string, inviterEmail: string, telegramDeepLink?: string): string {
   const safeUrl = escapeHtml(inviteUrl);
   const safeInviter = escapeHtml(inviterEmail);
+  const inviterName = inviterEmail.split("@")[0] ?? "Alguien";
+  const safeInviterName = escapeHtml(inviterName);
   const isEditor = role === "editor";
   const roleBadge = isEditor ? "Editor" : "Viewer";
   const rolePerk = isEditor
-    ? "podés cargar movimientos y verlos en tiempo real."
+    ? "podés ver y cargar movimientos en tiempo real."
     : "podés ver todos los movimientos del dashboard.";
+
+  // Single-CTA dashboard invite (research-driven, 2026-05-21 redesign).
+  // Telegram, if pre-authorized, becomes a small secondary line — not a full section.
   const body = `
-    <p class="eyebrow">Invitación a dashboard</p>
-    <h2 class="title">Sumate al dashboard de ${safeInviter}</h2>
-    <p class="lede"><strong>${safeInviter}</strong> te invitó a colaborar en Caja Chica como <span class="badge">${roleBadge}</span>. Compartís los mismos datos: ${rolePerk}</p>
+    <p class="from"><strong>${safeInviterName}</strong> · vía Caja Chica</p>
+    <h1 class="title">${safeInviterName} te sumó al dashboard.</h1>
+    <p class="lede">Compartimos los mismos movimientos. Entrás como <span class="badge">${roleBadge}</span> así ${rolePerk}</p>
 
     <div class="cta">
-      <a href="${safeUrl}">Unirme al dashboard</a>
-      <span class="hint">Tocá el botón y entrá con Google.</span>
+      <a href="${safeUrl}">Entrar con Google</a>
     </div>
 
-    <div class="note">
-      Importante: ingresá con la cuenta de Google asociada a este mail. Otra cuenta no va a poder acceder.
-    </div>
-
-    <div class="section">
-      <h3>Primeros pasos</h3>
-      <ol class="steps">
-        <li>Tocá el botón de arriba para aceptar la invitación.</li>
-        <li>Elegí <strong>Entrar con Google</strong> y seleccioná esta dirección.</li>
-        <li>Listo. Ya ves el dashboard compartido.</li>
-      </ol>
-    </div>
-
-    <hr class="rule" />
+    <p class="fine">Usá la cuenta de Google asociada a este mail. Otra cuenta no va a poder acceder.</p>
 
     ${telegramDeepLink ? `
-    <hr class="rule" />
+    <p class="aside">¿Preferís cargar gastos por Telegram? <a class="link" href="${escapeHtml(telegramDeepLink)}">Vincular después del primer login →</a></p>
+    ` : ``}
 
-    <div class="section">
-      <h3>Vincular Telegram</h3>
-      <p class="body">Tu invitación incluye acceso directo al bot de Telegram. Podés vincular tu cuenta ahora.</p>
-      <div class="cta">
-        <a href="${escapeHtml(telegramDeepLink)}">Vincular mi Telegram</a>
-        <span class="hint">Primero activá tu cuenta en la app, luego usá este enlace.</span>
-      </div>
-    </div>
-    ` : `
-    <div class="section">
-      <h3>Telegram (opcional)</h3>
-      <ol class="steps">
-        <li>${safeInviter} te genera un enlace desde <strong>Colaboración &rsaquo; Vincular Telegram</strong>.</li>
-        <li>Abrí ese enlace en la app de Telegram.</li>
-        <li>Cuando se confirme, usá <strong>/menu</strong> para empezar.</li>
-      </ol>
-    </div>
-    `}
-
-    <p class="signoff">Cualquier duda, respondé este mail.</p>
+    <p class="signoff">Cualquier cosa, respondé este mail.</p>
+    <p class="signoff"><strong>${safeInviterName}</strong></p>
+    <p class="from-footer">Te escribe ${safeInviter}. Caja Chica solo le presta el sobre.</p>
   `;
   return baseTemplate(
-    "Te invitaron a un dashboard en Caja Chica",
-    `${inviterEmail} te invitó a colaborar en su dashboard de Caja Chica.`,
+    `${inviterName} te sumó al dashboard`,
+    `${inviterName} te invitó a su dashboard de Caja Chica como ${roleBadge}.`,
     body,
   );
 }

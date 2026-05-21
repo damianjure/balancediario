@@ -376,7 +376,7 @@ test("GET /api/me — is_dashboard_joiner=true when dashboard_members has invite
   );
 });
 
-test("GET /api/me — joiner with onboarding_state=pending returns onboarding_state=completed (seed bypassed)", async () => {
+test("GET /api/me — joiner with onboarding_state=pending stays pending (seed bypassed, wizard renders)", async () => {
   await withPreAuthServer(
     {
       appUsers: [joinerAppUser], // onboarding_state: "pending"
@@ -387,8 +387,10 @@ test("GET /api/me — joiner with onboarding_state=pending returns onboarding_st
       const res = await fetch(`${base}/api/me`, { headers: bearer() });
       assert.equal(res.status, 200);
       const body = await res.json() as any;
-      // Joiner should get completed, NOT seeded (seed should be bypassed)
-      assert.equal(body.onboarding_state, "completed");
+      // Joiner stays 'pending' so the frontend renders <WelcomeJoined>.
+      // The wizard closes via PATCH /api/me { onboarding_state: 'completed' }.
+      // Seed is still bypassed — that's verified by the absence of seed side effects.
+      assert.equal(body.onboarding_state, "pending");
       assert.equal(body.is_dashboard_joiner, true);
     },
   );

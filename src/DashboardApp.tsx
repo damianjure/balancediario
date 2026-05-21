@@ -218,6 +218,17 @@ export default function DashboardApp({ viewer, onSignOut, theme, onToggleTheme, 
   const tabs = viewer.role === 'superadmin'
     ? [...BASE_TAB_CONFIG, { id: 'superadmin' as DashboardTab, label: 'SuperAdmin', description: 'Usuarios, invitaciones y configuración global', icon: ShieldCheck }]
     : BASE_TAB_CONFIG;
+
+  // Normalize activeTab against the current viewer's allowed tabs.
+  // Without this, a localStorage value persisted by a previous (privileged) user
+  // can leave a non-privileged user sitting on a tab they shouldn't see (e.g. SuperAdmin).
+  useEffect(() => {
+    const allowedIds = tabs.map((t) => t.id);
+    if (!allowedIds.includes(activeTab)) {
+      setActiveTab(tabs[0].id);
+    }
+  }, [viewer.id, viewer.role, activeTab, tabs]);
+
   const activeTabMeta = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   const monthlyChartDataArs = [...monthlySummaries]
     .reverse()

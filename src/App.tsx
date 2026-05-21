@@ -152,6 +152,12 @@ export default function App() {
   const handleSignOut = async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
+    // Clear per-user UI state so the next user does not inherit it.
+    try {
+      window.localStorage.removeItem('caja-chica:activeTab');
+    } catch {
+      /* ignore */
+    }
     setViewer(null);
     setSession(null);
     setAuthLoading(false);
