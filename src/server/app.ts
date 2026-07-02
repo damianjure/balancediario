@@ -1,6 +1,6 @@
 import express, { type Request, RequestHandler } from "express";
 import { tierRead, tierWrite, tierAuth, tierStrict, tierResend } from "./rateLimit.ts";
-import { randomBytes } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 
 import { filterMovementsForReport, resolveReportDateRange } from "../reports/shared.ts";
 import { buildReportFile } from "./reportExports.ts";
@@ -150,7 +150,18 @@ function withCors(allowedOrigins: string[]): RequestHandler {
 
 function hasValidAdminToken(req: express.Request, adminApiToken?: string) {
   if (!adminApiToken) return false;
-  return req.header("X-Admin-Token") === adminApiToken;
+
+  const providedToken = req.header("X-Admin-Token") || "";
+  const expectedTokenBuffer = Buffer.from(adminApiToken, "utf8");
+  const providedTokenBuffer = Buffer.from(providedToken, "utf8");
+
+  // Prevent timing attacks by using crypto.timingSafeEqual
+  // Must check length first to prevent TypeError from timingSafeEqual
+  if (expectedTokenBuffer.length !== providedTokenBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(expectedTokenBuffer, providedTokenBuffer);
 }
 
 
