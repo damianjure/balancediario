@@ -1,0 +1,6 @@
+interface:
+  display_name: "Caja Chica"
+  short_description: "Repo-specific patterns and workflows for caja-chica"
+  default_prompt: "Use the caja-chica repo skill to follow existing architecture, testing, and workflow conventions."
+policy:
+  allow_implicit_invocation: true
