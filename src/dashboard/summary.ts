@@ -211,10 +211,10 @@ export function getCompanySummaries(history: Movimiento[], extraCompanies: strin
 export function getCategorySummaries(history: Movimiento[], companyName?: string) {
   const map = new Map<string, CategorySummary>();
 
-  history
-    .filter((item) => item.tipo === 'egreso')
-    .filter((item) => !companyName || item.empresa_nombre === companyName)
-    .forEach((item) => {
+  // ⚡ Bolt: Single for...of loop avoids intermediate array allocations from chained .filter().forEach()
+  for (const item of history) {
+    if (item.tipo !== 'egreso') continue;
+    if (companyName && item.empresa_nombre !== companyName) continue;
       const name = item.categoria || 'Otros';
       const summary = map.get(name) ?? { name, egresoArs: 0, egresoUsd: 0, movimientos: 0 };
       const amount = Number(item.monto || 0);
@@ -223,7 +223,7 @@ export function getCategorySummaries(history: Movimiento[], companyName?: string
       if (item.moneda === 'USD') summary.egresoUsd += amount;
       summary.movimientos += 1;
       map.set(name, summary);
-    });
+  }
 
   return [...map.values()].sort((a, b) => b.egresoArs - a.egresoArs || b.egresoUsd - a.egresoUsd);
 }
@@ -508,16 +508,19 @@ export function topCategoriesByType(
 }
 
 export function filterMovements(history: Movimiento[], filters: MovementFilters) {
-  return history.filter((item) => {
-    if (filters.company && filters.company !== 'all' && item.empresa_nombre !== filters.company) return false;
-    if (filters.tipo && filters.tipo !== 'all' && item.tipo !== filters.tipo) return false;
-    if (filters.moneda && filters.moneda !== 'all' && item.moneda !== filters.moneda) return false;
-    if (filters.category && filters.category !== 'all' && item.categoria !== filters.category) return false;
+  // ⚡ Bolt: Use for...of instead of filter for faster iteration over large history
+  const result: Movimiento[] = [];
+  for (const item of history) {
+    if (filters.company && filters.company !== 'all' && item.empresa_nombre !== filters.company) continue;
+    if (filters.tipo && filters.tipo !== 'all' && item.tipo !== filters.tipo) continue;
+    if (filters.moneda && filters.moneda !== 'all' && item.moneda !== filters.moneda) continue;
+    if (filters.category && filters.category !== 'all' && item.categoria !== filters.category) continue;
     if (filters.from || filters.to) {
       const day = (item.created_at ?? '').slice(0, 10);
-      if (filters.from && day < filters.from) return false;
-      if (filters.to && day > filters.to) return false;
+      if (filters.from && day < filters.from) continue;
+      if (filters.to && day > filters.to) continue;
     }
-    return true;
-  });
+    result.push(item);
+  }
+  return result;
 }
